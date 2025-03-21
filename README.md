@@ -86,6 +86,25 @@ pip install -r requirements.txt
    ```
    - 모든 학생에게 4자리 숫자로 구성된 비밀번호가 자동 생성됩니다.
 
+#### students.json 파일 형식
+
+`students.json` 파일은 다음과 같은 형식의 JSON 배열을 포함합니다:
+```json
+[
+    {
+        "id": 1,
+        "name": "홍길동",
+        "present": false,
+        "code": "",
+        "timestamp": null,
+        "password": "1234"
+    },
+  {
+    // 다른 삭제된 학생 정보
+  }
+]
+```
+
 ### 3. 서버 시작하기
 
 ```bash
@@ -238,8 +257,6 @@ python update_students.py "다른파일이름.xlsx"
   }
 ]
 ```
-
-### 2. 에러 해결 가이드
 
 ## UI 개선 사항 (2025년 3월 업데이트)
 
