@@ -222,7 +222,7 @@ python update_students.py "다른파일이름.xlsx"
 [
   {
     "id": 1,
-    "name": "강유라",
+    "name": "홍길동",
     "password": "1234",
     "present": false,
     "code": "",
