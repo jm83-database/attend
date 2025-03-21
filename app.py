@@ -217,6 +217,154 @@ def download_attendance_csv():
         print(f"CSV 다운로드 중 오류 발생: {e}")
         return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
 
+# 학생 삭제 API 추가
+@app.route('/api/students/<int:student_id>', methods=['DELETE'])
+def delete_student(student_id):
+    global students
+    
+    # 선생님 비밀번호 확인
+    data = request.json
+    teacher_password = data.get('teacher_password')
+    
+    if teacher_password != 'teacher':  # 실제 구현 시 더 안전한 인증 방식 사용 권장
+        return jsonify({"success": False, "message": "선생님 비밀번호가 올바르지 않습니다."}), 401
+    
+    # 학생 ID로 학생 찾기
+    student_to_delete = None
+    for i, student in enumerate(students):
+        if student['id'] == student_id:
+            student_to_delete = students.pop(i)
+            break
+    
+    if student_to_delete:
+        # 삭제 로그 저장 (복구 가능하도록)
+        log_deleted_student(student_to_delete)
+        
+        # 변경된 학생 목록 저장
+        save_students()
+        
+        return jsonify({
+            "success": True, 
+            "message": f"{student_to_delete['name']} 학생이 삭제되었습니다.",
+            "deleted_student": student_to_delete
+        })
+    else:
+        return jsonify({"success": False, "message": "해당 ID의 학생을 찾을 수 없습니다."}), 404
+
+# 삭제된 학생 로그 저장 (복구 가능하도록)
+def log_deleted_student(student):
+    try:
+        import datetime
+        
+        # 로그 디렉토리 확인 및 생성
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # 삭제 로그 파일 경로
+        log_file = os.path.join(log_dir, 'deleted_students.json')
+        
+        # 기존 로그 불러오기
+        deleted_students = []
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                deleted_students = json.load(f)
+        
+        # 현재 시간 추가
+        student['deleted_at'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 삭제된 학생 정보 추가
+        deleted_students.append(student)
+        
+        # 로그 저장
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(deleted_students, f, ensure_ascii=False, indent=4)
+            
+    except Exception as e:
+        print(f"삭제 로그 저장 중 오류 발생: {e}")
+
+# 삭제된 학생 목록 조회 API
+@app.route('/api/students/deleted', methods=['GET'])
+def get_deleted_students():
+    try:
+        # 선생님 비밀번호 확인
+        teacher_password = request.args.get('teacher_password')
+        
+        if teacher_password != 'teacher':  # 실제 구현 시 더 안전한 인증 방식 사용 권장
+            return jsonify({"success": False, "message": "선생님 비밀번호가 올바르지 않습니다."}), 401
+        
+        # 로그 파일 경로
+        log_file = os.path.join('logs', 'deleted_students.json')
+        
+        # 삭제된 학생 목록 불러오기
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                deleted_students = json.load(f)
+            return jsonify(deleted_students)
+        else:
+            return jsonify([])
+            
+    except Exception as e:
+        print(f"삭제된 학생 목록 조회 중 오류 발생: {e}")
+        return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
+
+# 삭제된 학생 복구 API
+@app.route('/api/students/restore', methods=['POST'])
+def restore_student():
+    global students
+    
+    try:
+        data = request.json
+        student_id = data.get('student_id')
+        teacher_password = data.get('teacher_password')
+        
+        if teacher_password != 'teacher':  # 실제 구현 시 더 안전한 인증 방식 사용 권장
+            return jsonify({"success": False, "message": "선생님 비밀번호가 올바르지 않습니다."}), 401
+        
+        # 로그 파일 경로
+        log_file = os.path.join('logs', 'deleted_students.json')
+        
+        # 삭제된 학생 목록 불러오기
+        if not os.path.exists(log_file):
+            return jsonify({"success": False, "message": "삭제된 학생 기록이 없습니다."}), 404
+            
+        with open(log_file, 'r', encoding='utf-8') as f:
+            deleted_students = json.load(f)
+        
+        # ID로 학생 찾기
+        student_to_restore = None
+        for i, student in enumerate(deleted_students):
+            if student['id'] == student_id:
+                student_to_restore = deleted_students.pop(i)
+                break
+        
+        if not student_to_restore:
+            return jsonify({"success": False, "message": "해당 ID의 삭제된 학생을 찾을 수 없습니다."}), 404
+        
+        # 삭제 시간 정보 제거
+        if 'deleted_at' in student_to_restore:
+            del student_to_restore['deleted_at']
+        
+        # 학생 목록에 복구
+        students.append(student_to_restore)
+        
+        # 업데이트된 목록 저장
+        save_students()
+        
+        # 업데이트된 삭제 로그 저장
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(deleted_students, f, ensure_ascii=False, indent=4)
+        
+        return jsonify({
+            "success": True, 
+            "message": f"{student_to_restore['name']} 학생이 복구되었습니다.",
+            "restored_student": student_to_restore
+        })
+        
+    except Exception as e:
+        print(f"학생 복구 중 오류 발생: {e}")
+        return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
+
 # 학생 비밀번호 다운로드 엔드포인트 (교사용)
 @app.route('/api/students/passwords', methods=['GET'])
 def download_student_passwords():

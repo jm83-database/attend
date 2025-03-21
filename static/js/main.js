@@ -14,6 +14,12 @@ const AttendanceChecker = () => {
   const [teacherPassword, setTeacherPassword] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState(null); // 대기 중인 액션 (reset, downloadAttendance, downloadPasswords)
   
+  // 학생 삭제 관련 상태 추가
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [studentToDelete, setStudentToDelete] = React.useState(null);
+  const [showDeletedStudents, setShowDeletedStudents] = React.useState(false);
+  const [deletedStudents, setDeletedStudents] = React.useState([]);
+  
   // 학생 목록 가져오기
   const fetchStudents = async () => {
     try {
@@ -161,7 +167,103 @@ const AttendanceChecker = () => {
       case 'downloadPasswords':
         downloadStudentPasswordsExecute();
         break;
+      case 'viewDeletedStudents':
+        fetchDeletedStudents();
+        break;
     }
+  };
+  
+  // 학생 삭제 모달 열기
+  const openDeleteModal = (student) => {
+    setStudentToDelete(student);
+    setShowDeleteConfirm(true);
+  };
+
+  // 학생 삭제 모달 닫기
+  const closeDeleteModal = () => {
+    setShowDeleteConfirm(false);
+    setStudentToDelete(null);
+    setTeacherPassword('');
+  };
+
+  // 학생 삭제 실행
+  const deleteStudent = async () => {
+    if (!studentToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/students/${studentToDelete.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teacher_password: teacherPassword })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        fetchStudents(); // 학생 목록 새로고침
+        setMessage(data.message);
+      } else {
+        setMessage(data.message);
+      }
+      
+      closeDeleteModal();
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      setMessage('서버 오류가 발생했습니다.');
+      closeDeleteModal();
+    }
+  };
+
+  // 삭제된 학생 목록 불러오기
+  const fetchDeletedStudents = async () => {
+    try {
+      const response = await fetch(`/api/students/deleted?teacher_password=${teacherPassword}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setDeletedStudents(data);
+        setShowDeletedStudents(true);
+      } else {
+        const data = await response.json();
+        setMessage(data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching deleted students:', error);
+      setMessage('서버 오류가 발생했습니다.');
+    }
+  };
+
+  // 학생 복구하기
+  const restoreStudent = async (studentId) => {
+    try {
+      const response = await fetch('/api/students/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: studentId,
+          teacher_password: teacherPassword
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // 학생 목록과 삭제된 학생 목록 새로고침
+        fetchStudents();
+        fetchDeletedStudents();
+        setMessage(data.message);
+      } else {
+        setMessage(data.message);
+      }
+    } catch (error) {
+      console.error('Error restoring student:', error);
+      setMessage('서버 오류가 발생했습니다.');
+    }
+  };
+
+  // 삭제된 학생 목록 모달 닫기
+  const closeDeletedStudentsModal = () => {
+    setShowDeletedStudents(false);
   };
   
   // 출석부 초기화 요청
@@ -253,6 +355,95 @@ const AttendanceChecker = () => {
           </div>
         </div>
       )}
+
+      {/* 학생 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-lg font-medium mb-4">학생 삭제 확인</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              <strong>{studentToDelete?.name}</strong> 학생을 삭제하시겠습니까?
+              <br />이 작업은 되돌릴 수 있지만, 출석 기록은 초기화됩니다.
+            </p>
+            <input
+              type="password"
+              value={teacherPassword}
+              onChange={e => setTeacherPassword(e.target.value)}
+              placeholder="선생님 비밀번호"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeDeleteModal}
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+              >
+                취소
+              </button>
+              <button
+                onClick={deleteStudent}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제된 학생 목록 모달 */}
+      {showDeletedStudents && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+            <h3 className="text-lg font-medium mb-4">삭제된 학생 목록</h3>
+            
+            {deletedStudents.length === 0 ? (
+              <p className="text-gray-600">삭제된 학생이 없습니다.</p>
+            ) : (
+              <div className="overflow-auto max-h-96">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">삭제 시간</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {deletedStudents.map(student => (
+                      <tr key={student.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">{student.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{student.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {student.deleted_at || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => restoreStudent(student.id)}
+                            className="text-blue-600 hover:text-blue-800 text-sm"
+                          >
+                            복구
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={closeDeletedStudentsModal}
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-4 border-b">
           <div className="flex justify-between items-center">
@@ -329,6 +520,7 @@ const AttendanceChecker = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">출석 상태</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">확인 시간</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -342,6 +534,14 @@ const AttendanceChecker = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {student.timestamp || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <button
+                              onClick={() => openDeleteModal(student)}
+                              className="text-red-600 hover:text-red-800 text-sm"
+                            >
+                              삭제
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -370,6 +570,15 @@ const AttendanceChecker = () => {
                   className="mt-4 bg-yellow-600 text-white p-2 rounded hover:bg-yellow-700"
                 >
                   학생 비밀번호 다운로드
+                </button>
+                
+                <button
+                  onClick={() => {
+                    openTeacherModal('viewDeletedStudents');
+                  }}
+                  className="mt-4 bg-purple-600 text-white p-2 rounded hover:bg-purple-700"
+                >
+                  삭제된 학생 목록
                 </button>
               </div>
             </div>
