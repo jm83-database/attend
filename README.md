@@ -123,7 +123,7 @@ python app.py
 > 삭제된 학생 정보는 로그 파일에 저장되어 나중에 복구할 수 있습니다.
 
 ### 2. 삭제된 학생 관리
-
+![삭제 화면](./static/images/delete_screen.png)
 선생님 모드에서 삭제된 학생을 복구할 수 있습니다:
 
 1. '삭제된 학생 목록' 버튼을 클릭합니다.
@@ -151,6 +151,20 @@ python update_students.py "다른파일이름.xlsx"
 ```
 
 ## 관리자 기능
+
+## 트러블슈팅
+
+### JavaScript 구문 오류
+- **문제**: `Uncaught SyntaxError: Unexpected token '?'` 오류가 발생하는 경우
+- **원인**: 일부 브라우저나 환경에서는 옵셔널 체이닝 연산자(`?.`)를 지원하지 않을 수 있습니다.
+- **해결 방법**: `static/js/main.js` 파일에서 옵셔널 체이닝 연산자를 논리 연산자로 대체합니다.
+  ```javascript
+  // 변경 전
+  <strong>{studentToDelete?.name}</strong>
+  
+  // 변경 후
+  <strong>{studentToDelete && studentToDelete.name}</strong>
+  ```
 
 ### 엑셀에서 학생 명단 추출 (커스터마이징)
 
