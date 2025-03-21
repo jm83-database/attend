@@ -9,6 +9,11 @@ const AttendanceChecker = () => {
   const [message, setMessage] = React.useState('');
   const [currentTime, setCurrentTime] = React.useState(new Date());
   
+  // 선생님 권한 확인을 위한 상태 추가
+  const [showTeacherModal, setShowTeacherModal] = React.useState(false);
+  const [teacherPassword, setTeacherPassword] = React.useState('');
+  const [pendingAction, setPendingAction] = React.useState(null); // 대기 중인 액션 (reset, downloadAttendance, downloadPasswords)
+  
   // 학생 목록 가져오기
   const fetchStudents = async () => {
     try {
@@ -115,8 +120,57 @@ const AttendanceChecker = () => {
     }
   };
   
-  // 출석부 초기화
-  const resetAttendance = async () => {
+  // 선생님 권한 확인 모달 열기
+  const openTeacherModal = (action) => {
+    setPendingAction(action);
+    setTeacherPassword('');
+    setShowTeacherModal(true);
+  };
+  
+  // 선생님 권한 확인 모달 닫기
+  const closeTeacherModal = () => {
+    setShowTeacherModal(false);
+    setPendingAction(null);
+    setTeacherPassword('');
+  };
+  
+  // 선생님 비밀번호 확인
+  const verifyTeacherPassword = () => {
+    if (teacherPassword !== 'teacher') {
+      setMessage('선생님 비밀번호가 올바르지 않습니다.');
+      closeTeacherModal();
+      return false;
+    }
+    closeTeacherModal();
+    return true;
+  };
+  
+  // 선생님 비밀번호 검증 후 액션 실행
+  const executeTeacherAction = async () => {
+    if (!verifyTeacherPassword()) {
+      return;
+    }
+    
+    switch (pendingAction) {
+      case 'reset':
+        await resetAttendanceExecute();
+        break;
+      case 'downloadAttendance':
+        downloadAttendanceCSVExecute();
+        break;
+      case 'downloadPasswords':
+        downloadStudentPasswordsExecute();
+        break;
+    }
+  };
+  
+  // 출석부 초기화 요청
+  const resetAttendance = () => {
+    openTeacherModal('reset');
+  };
+  
+  // 출석부 초기화 실행
+  const resetAttendanceExecute = async () => {
     try {
       const response = await fetch('/api/attendance/reset', {
         method: 'POST',
@@ -138,13 +192,23 @@ const AttendanceChecker = () => {
     }
   };
   
-  // 출석부 CSV 다운로드
+  // 출석부 CSV 다운로드 요청
   const downloadAttendanceCSV = () => {
+    openTeacherModal('downloadAttendance');
+  };
+  
+  // 출석부 CSV 다운로드 실행
+  const downloadAttendanceCSVExecute = () => {
     window.location.href = '/api/attendance/download';
   };
   
-  // 학생 비밀번호 CSV 다운로드 (선생님용)
+  // 학생 비밀번호 CSV 다운로드 요청 (선생님용)
   const downloadStudentPasswords = () => {
+    openTeacherModal('downloadPasswords');
+  };
+  
+  // 학생 비밀번호 CSV 다운로드 실행
+  const downloadStudentPasswordsExecute = () => {
     window.location.href = '/api/students/passwords';
   };
   
@@ -159,6 +223,36 @@ const AttendanceChecker = () => {
   
   return (
     <div className="w-full max-w-4xl mx-auto p-4">
+      {/* 선생님 비밀번호 확인 모달 */}
+      {showTeacherModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-lg font-medium mb-4">선생님 인증</h3>
+            <p className="text-sm text-gray-600 mb-4">선생님 비밀번호를 입력해주세요.</p>
+            <input
+              type="password"
+              value={teacherPassword}
+              onChange={e => setTeacherPassword(e.target.value)}
+              placeholder="선생님 비밀번호"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeTeacherModal}
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+              >
+                취소
+              </button>
+              <button
+                onClick={executeTeacherAction}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-4 border-b">
           <div className="flex justify-between items-center">
