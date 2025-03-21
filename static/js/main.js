@@ -543,16 +543,25 @@ const AttendanceChecker = () => {
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-4 border-b">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">온라인 수업 출석 확인 시스템</h2>
+          <div className="flex justify-between items-center mb-3">
             <div className="text-sm flex items-center gap-2">
               <span className="inline-block w-4 h-4">⏰</span>
               {currentTime.toLocaleTimeString()}
             </div>
+            <button
+              onClick={toggleMode}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-md"
+            >
+              {confirmationMode ? '선생님 모드로 전환' : '학생 모드로 전환'}
+            </button>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
-            {confirmationMode ? '학생 출석 확인 모드' : '선생님 관리 모드'}
-          </p>
+          
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-indigo-800">온라인 수업 출석 확인 시스템</h2>
+            <p className="text-sm text-indigo-600 mt-1 font-medium inline-block px-3 py-1 bg-indigo-100 rounded-full">
+              {confirmationMode ? '학생 출석 확인 모드' : '선생님 관리 모드'}
+            </p>
+          </div>
         </div>
         
         <div className="p-4">
@@ -601,43 +610,50 @@ const AttendanceChecker = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="bg-gray-100 p-4 rounded-lg text-center">
-                <div className="text-sm font-medium mb-1">현재 출석 코드</div>
-                <div className="text-3xl font-bold tracking-wider">{code}</div>
-                <div className="text-xs text-gray-500 mt-1">5분마다 자동으로 갱신됩니다</div>
-              </div>
-              
-              {/* 출석률 표시 섹션 */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center mb-1">
-                  <div className="text-sm font-medium">현재 출석률</div>
-                  <div className="text-sm font-bold">{presentCount}/{totalCount}명 ({attendanceRate}%)</div>
+            <div className="space-y-6">
+              {/* 출석 코드와 출석률을 나란히 배치하는 카드 디자인 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                {/* 출석 코드 카드 */}
+                <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-4 rounded-lg shadow-lg text-center text-white">
+                  <div className="text-sm font-medium mb-1">현재 출석 코드</div>
+                  <div className="text-4xl font-bold tracking-wider">{code}</div>
+                  <div className="text-xs mt-1 text-blue-100">5분마다 자동으로 갱신됩니다</div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="bg-blue-600 h-2.5 rounded-full" 
-                    style={{ width: `${attendanceRate}%` }}
-                  ></div>
+                
+                {/* 출석률 카드 */}
+                <div className="bg-gradient-to-r from-green-500 to-green-700 p-4 rounded-lg shadow-lg">
+                  <div className="flex justify-between items-center mb-1 text-white">
+                    <div className="text-sm font-medium">현재 출석률</div>
+                    <div className="text-lg font-bold">{presentCount}/{totalCount}명 ({attendanceRate}%)</div>
+                  </div>
+                  <div className="w-full bg-white bg-opacity-30 rounded-full h-3">
+                    <div 
+                      className="bg-white h-3 rounded-full" 
+                      style={{ width: `${attendanceRate}%` }}
+                    ></div>
+                  </div>
                 </div>
               </div>
               
               <div className="mt-6">
-                <h3 className="text-lg font-medium mb-2">학생 출석 현황 ({presentCount}/{totalCount}명)</h3>
-                <div className="border rounded overflow-hidden">
+                <h3 className="text-lg font-medium mb-3 border-b pb-2 text-center">
+                  학생 목록
+                </h3>
+                
+                <div className="border rounded-lg overflow-hidden shadow">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">출석 상태</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">확인 시간</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {students.map(student => (
-                        <tr key={student.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">{student.name}</td>
+                        <tr key={student.id} className={student.present ? "bg-green-50" : ""}>
+                          <td className="px-6 py-4 whitespace-nowrap font-medium">{student.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs rounded-full ${student.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                               {student.present ? '출석' : '미출석'}
@@ -649,7 +665,7 @@ const AttendanceChecker = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <button
                               onClick={() => openDeleteModal(student)}
-                              className="text-red-600 hover:text-red-800 text-sm"
+                              className="text-red-600 hover:text-red-800 text-sm hover:underline"
                             >
                               삭제
                             </button>
@@ -660,50 +676,56 @@ const AttendanceChecker = () => {
                   </table>
                 </div>
               </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={resetAttendance}
-                  className="mt-4 bg-red-600 text-white p-2 rounded hover:bg-red-700"
-                >
-                  출석부 초기화
-                </button>
+              <div className="mt-8">
+                <h3 className="text-lg font-medium mb-4 text-center">관리 기능</h3>
                 
-                <button
-                  onClick={downloadAttendanceCSV}
-                  className="mt-4 bg-green-600 text-white p-2 rounded hover:bg-green-700"
-                >
-                  출석부 CSV 다운로드
-                </button>
-                
-                <button
-                  onClick={downloadStudentPasswords}
-                  className="mt-4 bg-yellow-600 text-white p-2 rounded hover:bg-yellow-700"
-                >
-                  학생 비밀번호 다운로드
-                </button>
-                
-                <button
-                  onClick={() => {
-                    openTeacherModal('viewDeletedStudents');
-                  }}
-                  className="mt-4 bg-purple-600 text-white p-2 rounded hover:bg-purple-700"
-                >
-                  삭제된 학생 목록
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <button
+                    onClick={resetAttendance}
+                    className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-red-50 hover:border-red-200 transition-all"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span className="text-sm font-medium">출석부 초기화</span>
+                  </button>
+                  
+                  <button
+                    onClick={downloadAttendanceCSV}
+                    className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-green-50 hover:border-green-200 transition-all"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span className="text-sm font-medium">출석부 CSV 다운로드</span>
+                  </button>
+                  
+                  <button
+                    onClick={downloadStudentPasswords}
+                    className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-yellow-50 hover:border-yellow-200 transition-all"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span className="text-sm font-medium">학생 비밀번호 다운로드</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => { openTeacherModal('viewDeletedStudents'); }}
+                    className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-purple-50 hover:border-purple-200 transition-all"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <span className="text-sm font-medium">삭제된 학생 목록</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </div>
         
-        <div className="p-4 border-t">
-          <button
-            onClick={toggleMode}
-            className="w-full mt-2 bg-gray-200 text-gray-800 p-2 rounded hover:bg-gray-300"
-          >
-            {confirmationMode ? '선생님 모드로 전환' : '학생 모드로 전환'}
-          </button>
-        </div>
+        {/* 하단 모드 전환 버튼 제거 */}
       </div>
     </div>
   );

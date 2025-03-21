@@ -890,9 +890,9 @@
     {
         "id": 1,
         "name": "강유라",
-        "present": false,
-        "code": "",
-        "timestamp": null,
+        "present": true,
+        "code": "M8W12U",
+        "timestamp": "02:43:52",
         "password": "9272"
     },
     {
