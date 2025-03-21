@@ -9,6 +9,11 @@ const AttendanceChecker = () => {
   const [message, setMessage] = React.useState('');
   const [currentTime, setCurrentTime] = React.useState(new Date());
   
+  // 출석률 관련 상태 추가
+  const [attendanceRate, setAttendanceRate] = React.useState(0);
+  const [presentCount, setPresentCount] = React.useState(0);
+  const [totalCount, setTotalCount] = React.useState(0);
+  
   // 선생님 권한 확인을 위한 상태 추가
   const [showTeacherModal, setShowTeacherModal] = React.useState(false);
   const [teacherPassword, setTeacherPassword] = React.useState('');
@@ -33,6 +38,15 @@ const AttendanceChecker = () => {
       // ID 기준으로 학생 목록 정렬 (원본 배열을 변경하지 않기 위해 새 배열 생성)
       const sortedStudents = [...data].sort((a, b) => a.id - b.id);
       setStudents(sortedStudents);
+      
+      // 출석률 계산
+      const totalStudents = sortedStudents.length;
+      const presentStudents = sortedStudents.filter(student => student.present).length;
+      const rate = totalStudents > 0 ? (presentStudents / totalStudents) * 100 : 0;
+      
+      setTotalCount(totalStudents);
+      setPresentCount(presentStudents);
+      setAttendanceRate(rate.toFixed(1));
     } catch (error) {
       console.error('Failed to fetch students:', error);
     }
@@ -594,8 +608,22 @@ const AttendanceChecker = () => {
                 <div className="text-xs text-gray-500 mt-1">5분마다 자동으로 갱신됩니다</div>
               </div>
               
+              {/* 출석률 표시 섹션 */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-1">
+                  <div className="text-sm font-medium">현재 출석률</div>
+                  <div className="text-sm font-bold">{presentCount}/{totalCount}명 ({attendanceRate}%)</div>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-blue-600 h-2.5 rounded-full" 
+                    style={{ width: `${attendanceRate}%` }}
+                  ></div>
+                </div>
+              </div>
+              
               <div className="mt-6">
-                <h3 className="text-lg font-medium mb-2">학생 출석 현황</h3>
+                <h3 className="text-lg font-medium mb-2">학생 출석 현황 ({presentCount}/{totalCount}명)</h3>
                 <div className="border rounded overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
