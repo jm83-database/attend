@@ -362,7 +362,7 @@ const AttendanceChecker = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">
             <h3 className="text-lg font-medium mb-4">학생 삭제 확인</h3>
             <p className="text-sm text-gray-600 mb-4">
-              <strong>{studentToDelete?.name}</strong> 학생을 삭제하시겠습니까?
+              <strong>{studentToDelete && studentToDelete.name}</strong> 학생을 삭제하시겠습니까?
               <br />이 작업은 되돌릴 수 있지만, 출석 기록은 초기화됩니다.
             </p>
             <input

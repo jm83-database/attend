@@ -259,7 +259,7 @@ def log_deleted_student(student):
         # 로그 디렉토리 확인 및 생성
         log_dir = 'logs'
         if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+            os.makedirs(log_dir, exist_ok=True)
         
         # 삭제 로그 파일 경로
         log_file = os.path.join(log_dir, 'deleted_students.json')
