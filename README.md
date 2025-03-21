@@ -100,7 +100,7 @@ pip install -r requirements.txt
         "password": "1234"
     },
   {
-    // 다른 삭제된 학생 정보
+    // 다른 추가된 학생 정보
   }
 ]
 ```
