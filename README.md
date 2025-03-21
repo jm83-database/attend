@@ -113,7 +113,7 @@ python app.py
 ## 학생 관리 기능
 
 ### 1. 학생 삭제 기능
-
+![삭제 화면](./static/images/delete_screen.png)
 선생님 모드에서 학생을 삭제할 수 있습니다:
 
 1. 학생 목록에서 삭제하려는 학생의 행 오른쪽 끝에 있는 '삭제' 버튼을 클릭합니다.
@@ -123,7 +123,7 @@ python app.py
 > 삭제된 학생 정보는 로그 파일에 저장되어 나중에 복구할 수 있습니다.
 
 ### 2. 삭제된 학생 관리
-![삭제 화면](./static/images/delete_screen.png)
+![복구 화면](./static/images/recovery_screen.png)
 선생님 모드에서 삭제된 학생을 복구할 수 있습니다:
 
 1. '삭제된 학생 목록' 버튼을 클릭합니다.
