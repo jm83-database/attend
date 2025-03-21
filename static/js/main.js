@@ -20,6 +20,10 @@ const AttendanceChecker = () => {
   const [showDeletedStudents, setShowDeletedStudents] = React.useState(false);
   const [deletedStudents, setDeletedStudents] = React.useState([]);
   
+  // 학생 복구 관련 상태 추가
+  const [showRestoreModal, setShowRestoreModal] = React.useState(false);
+  const [pendingStudentRestore, setPendingStudentRestore] = React.useState(null);
+  
   // 학생 목록 가져오기
   const fetchStudents = async () => {
     try {
@@ -237,16 +241,28 @@ const AttendanceChecker = () => {
     }
   };
 
-  // 학생 복구하기
-  const restoreStudent = async (studentId) => {
+  // 학생 복구 모달 열기 (수정된 부분)
+  const restoreStudent = (studentId) => {
+    // 복구할 학생 ID 저장
+    setPendingStudentRestore(studentId);
+    
+    // 비밀번호 초기화 및 모달 표시
+    setTeacherPassword('');
+    setShowRestoreModal(true);
+  };
+
+  // 학생 복구 실행 (수정된 부분)
+  const executeRestore = async () => {
+    if (!pendingStudentRestore) return;
+    
     try {
-      console.log(`복구 시도: 학생 ID=${studentId}, 교사 비밀번호 길이=${teacherPassword.length}`);
+      console.log(`복구 시도: 학생 ID=${pendingStudentRestore}, 교사 비밀번호 길이=${teacherPassword.length}`);
       
       const response = await fetch('/api/students/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          student_id: studentId,
+          student_id: pendingStudentRestore,
           teacher_password: teacherPassword
         })
       });
@@ -262,10 +278,24 @@ const AttendanceChecker = () => {
       } else {
         setMessage(data.message || '복구 실패: 서버 응답 오류');
       }
+      
+      // 모달 닫기 및 초기화
+      setShowRestoreModal(false);
+      setPendingStudentRestore(null);
+      
     } catch (error) {
       console.error('Error restoring student:', error);
       setMessage('서버 오류가 발생했습니다. 개발자 콘솔을 확인하세요.');
+      setShowRestoreModal(false);
+      setPendingStudentRestore(null);
     }
+  };
+
+  // 복구 모달 닫기
+  const closeRestoreModal = () => {
+    setShowRestoreModal(false);
+    setPendingStudentRestore(null);
+    setTeacherPassword('');
   };
 
   // 삭제된 학생 목록 모달 닫기
@@ -391,6 +421,39 @@ const AttendanceChecker = () => {
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
                 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 학생 복구 확인 모달 (새로 추가) */}
+      {showRestoreModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-lg font-medium mb-4">학생 복구 확인</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              학생을 복구하려면 선생님 비밀번호를 입력하세요.
+            </p>
+            <input
+              type="password"
+              value={teacherPassword}
+              onChange={e => setTeacherPassword(e.target.value)}
+              placeholder="선생님 비밀번호"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeRestoreModal}
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+              >
+                취소
+              </button>
+              <button
+                onClick={executeRestore}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                복구
               </button>
             </div>
           </div>

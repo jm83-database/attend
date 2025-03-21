@@ -1,13 +1,5 @@
 [
     {
-        "id": 1,
-        "name": "강유라",
-        "present": false,
-        "code": "",
-        "timestamp": null,
-        "password": "9272"
-    },
-    {
         "id": 2,
         "name": "강현비",
         "present": false,
@@ -902,5 +894,13 @@
         "code": "",
         "timestamp": null,
         "password": "3194"
+    },
+    {
+        "id": 1,
+        "name": "강유라",
+        "present": false,
+        "code": "",
+        "timestamp": null,
+        "password": "9272"
     }
 ]
