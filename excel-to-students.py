@@ -2,12 +2,13 @@ import pandas as pd
 import json
 import os
 
-def extract_students_from_excel(excel_file):
+def extract_students_with_duplicates(excel_file):
     """
-    Excel 파일의 모든 시트에서 학생 정보를 읽어 students 리스트로 변환합니다.
+    Excel 파일에서 학생 정보를 읽어 students 리스트로 변환합니다.
+    동명이인은 이름 뒤에 A, B, C 등을 붙여 구분합니다.
     """
     try:
-        # 엑셀 파일의 모든 시트 이름 가져오기
+        # Excel 파일의 모든 시트 이름 가져오기
         xl = pd.ExcelFile(excel_file)
         sheet_names = xl.sheet_names
         print(f"엑셀 파일에서 발견된 시트: {sheet_names}")
@@ -15,21 +16,20 @@ def extract_students_from_excel(excel_file):
         all_students = []
         student_id = 1  # 전체 학생에 대한 ID
         
+        # 이름 중복 확인을 위한 딕셔너리
+        name_counter = {}
+        
         # 각 시트별로 처리
         for sheet_name in sheet_names:
             print(f"\n--- '{sheet_name}' 시트 처리 중 ---")
             
-            # 여러 가능한 헤더 위치 시도 (헤더 없음, 첫 번째 행, 두 번째 행)
+            # 여러 가능한 헤더 위치 시도
             for header_row in [None, 0, 1]:
                 try:
                     if header_row is None:
-                        # 헤더 없이 데이터 읽기
                         df = pd.read_excel(excel_file, sheet_name=sheet_name, header=None)
-                        print(f"헤더 없이 데이터 읽기 시도")
                     else:
-                        # 지정된 행을 헤더로 사용
                         df = pd.read_excel(excel_file, sheet_name=sheet_name, header=header_row)
-                        print(f"헤더 행 {header_row+1}를 사용해 데이터 읽기 시도")
                     
                     # 데이터 미리보기
                     print("데이터 미리보기:")
@@ -56,17 +56,15 @@ def extract_students_from_excel(excel_file):
                     # 데이터 시작 행 결정
                     start_row = 0
                     if header_row is not None:
-                        # 헤더가 있으면 헤더 다음 행부터 시작
                         start_row = 0  # pandas가 이미 헤더를 제외함
                     else:
-                        # 헤더가 없으면 2행부터 시작 (첫 행이 헤더일 가능성)
                         start_row = 1
                     
                     students_in_sheet = []
                     
                     # 학생 데이터 추출
                     for idx, (_, row) in enumerate(df.iloc[start_row:].iterrows()):
-                        # 이름 값 가져오기 (열 이름 또는 인덱스로)
+                        # 이름 값 가져오기
                         if isinstance(name_column, (int, float)):
                             name_value = str(row.iloc[name_column]).strip()
                         else:
@@ -74,9 +72,25 @@ def extract_students_from_excel(excel_file):
                         
                         # 빈 값이나 NaN이 아닌 경우만 처리
                         if name_value and name_value.lower() != 'nan' and len(name_value) > 0:
+                            # 이름이 이미 있는지 확인하고 카운터 증가
+                            if name_value in name_counter:
+                                name_counter[name_value] += 1
+                                # 첫 번째 중복이면 기존 이름에 'A' 추가
+                                if name_counter[name_value] == 2:
+                                    # 이전 학생 찾아서 이름 수정
+                                    for s in all_students:
+                                        if s['name'] == name_value:
+                                            s['name'] = f"{name_value}A"
+                                            break
+                                # 현재 학생 이름에 알파벳 추가
+                                student_name = f"{name_value}{chr(64+name_counter[name_value])}"
+                            else:
+                                name_counter[name_value] = 1
+                                student_name = name_value
+                            
                             student = {
                                 "id": student_id,
-                                "name": name_value,
+                                "name": student_name,
                                 "present": False,
                                 "code": "",
                                 "timestamp": None
@@ -94,10 +108,6 @@ def extract_students_from_excel(excel_file):
                 except Exception as e:
                     print(f"헤더 행 {header_row}로 시도 중 오류 발생: {e}")
                     continue
-            
-            # 모든 헤더 위치 시도 후에도 데이터를 찾지 못한 경우
-            if not any(student.get("sheet") == sheet_name for student in all_students):
-                print(f"'{sheet_name}' 시트에서 학생 데이터를 추출하지 못했습니다.")
         
         print(f"\n총 {len(all_students)}명의 학생 데이터를 추출했습니다.")
         return all_students
@@ -117,21 +127,77 @@ def save_students_to_json(students, json_file='students.json'):
     except Exception as e:
         print(f"JSON 파일 저장 중 오류 발생: {e}")
 
+# 수동으로 학생 이름을 입력하는 함수 (Excel 처리가 어려울 경우)
+def create_students_manually(names):
+    """
+    학생 이름 목록으로부터 students.json 파일을 생성합니다.
+    동명이인은 자동으로 처리합니다.
+    
+    예시:
+    names = ["김민준", "이서연", "이수민", "이수민", "박지호"]
+    결과: 이수민A, 이수민B로 저장됩니다.
+    """
+    students = []
+    name_counter = {}
+    
+    for idx, name in enumerate(names):
+        name = name.strip()
+        if name in name_counter:
+            name_counter[name] += 1
+            if name_counter[name] == 2:
+                # 이전 학생 찾아서 이름 수정
+                for s in students:
+                    if s['name'] == name:
+                        s['name'] = f"{name}A"
+                        break
+            # 현재 학생 이름에 알파벳 추가
+            student_name = f"{name}{chr(64+name_counter[name])}"
+        else:
+            name_counter[name] = 1
+            student_name = name
+        
+        student = {
+            "id": idx + 1,
+            "name": student_name,
+            "present": False,
+            "code": "",
+            "timestamp": None
+        }
+        students.append(student)
+    
+    return students
+
 # 사용 예시
 if __name__ == "__main__":
-    excel_file = "MS AI School 6기 Teams 계정.xlsx"
-    students = extract_students_from_excel(excel_file)
-    
-    if students:
-        # JSON 파일로 저장
-        save_students_to_json(students)
+    try:
+        # Excel 파일에서 학생 데이터 추출
+        excel_file = "MS AI School 6기 Teams 계정.xlsx"
+        students = extract_students_with_duplicates(excel_file)
         
-        # 출력하여 확인
-        print("\n변환된 학생 목록 (처음 10명):")
-        for student in students[:10]:  # 처음 10명만 출력
-            print(f"ID: {student['id']}, 이름: {student['name']}")
-        
-        if len(students) > 10:
-            print(f"... 외 {len(students) - 10}명")
-    else:
-        print("학생 데이터를 추출할 수 없습니다.")
+        if students:
+            # JSON 파일로 저장
+            save_students_to_json(students)
+            
+            # 출력하여 확인
+            print("\n변환된 학생 목록 (처음 10명):")
+            for student in students[:10]:  # 처음 10명만 출력
+                print(f"ID: {student['id']}, 이름: {student['name']}")
+            
+            if len(students) > 10:
+                print(f"... 외 {len(students) - 10}명")
+        else:
+            print("Excel 파일에서 학생 데이터를 추출할 수 없습니다.")
+            
+            # 수동으로 학생 목록 입력 (예시)
+            print("\nExcel 처리에 실패했습니다. 수동으로 학생 목록을 입력하세요.")
+            student_names = [
+                "김민준", "이서연", "이수민", "이수민", "박지호", "정우진", "최수아", "이수민"
+            ]
+            manual_students = create_students_manually(student_names)
+            save_students_to_json(manual_students)
+            print("\n수동으로 생성된 학생 목록:")
+            for student in manual_students:
+                print(f"ID: {student['id']}, 이름: {student['name']}")
+            
+    except Exception as e:
+        print(f"오류 발생: {e}")
