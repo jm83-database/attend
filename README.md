@@ -64,7 +64,7 @@ python app.py
 - 개발 환경에서는 Flask 내장 서버가 사용되며, 프로덕션 환경에서는 Waitress 서버가 사용됩니다.
 
 ## 선생님 모드 사용법
-![출석 관리 시스템 메인 화면](./static/images/teacher_screen.jpg)
+![출석 관리 시스템 메인 화면](./static/images/teacher_screen.png)
 ### 1. 모드 전환
 애플리케이션 접속 시 기본적으로 선생님 모드로 시작합니다. 학생 모드에서 선생님 모드로 전환하려면 화면 하단의 "선생님 모드로 전환" 버튼을 클릭합니다.
 
