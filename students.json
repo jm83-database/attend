@@ -856,14 +856,6 @@
         "password": "5449"
     },
     {
-        "id": 109,
-        "name": "지중헌",
-        "present": false,
-        "code": "",
-        "timestamp": null,
-        "password": "3020"
-    },
-    {
         "id": 110,
         "name": "최이룸",
         "present": false,
@@ -902,5 +894,13 @@
         "code": "",
         "timestamp": null,
         "password": "9272"
+    },
+    {
+        "id": 109,
+        "name": "지중헌",
+        "present": false,
+        "code": "",
+        "timestamp": null,
+        "password": "3020"
     }
 ]

@@ -29,7 +29,10 @@ const AttendanceChecker = () => {
     try {
       const response = await fetch('/api/students');
       const data = await response.json();
-      setStudents(data);
+      
+      // ID 기준으로 학생 목록 정렬 (원본 배열을 변경하지 않기 위해 새 배열 생성)
+      const sortedStudents = [...data].sort((a, b) => a.id - b.id);
+      setStudents(sortedStudents);
     } catch (error) {
       console.error('Failed to fetch students:', error);
     }
@@ -228,7 +231,11 @@ const AttendanceChecker = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('삭제된 학생 목록:', data);
-        setDeletedStudents(data);
+        
+        // ID 기준으로 삭제된 학생 목록 정렬
+        const sortedDeletedStudents = [...data].sort((a, b) => a.id - b.id);
+        setDeletedStudents(sortedDeletedStudents);
+        
         setShowDeletedStudents(true);
       } else {
         const data = await response.json();
@@ -248,6 +255,9 @@ const AttendanceChecker = () => {
     
     // 비밀번호 초기화 및 모달 표시
     setTeacherPassword('');
+    
+    // 먼저 삭제된 학생 목록 모달을 닫고 바로 복구 모달 표시
+    setShowDeletedStudents(false);
     setShowRestoreModal(true);
   };
 
@@ -271,17 +281,20 @@ const AttendanceChecker = () => {
       console.log('복구 응답:', data);
       
       if (response.ok) {
-        // 학생 목록과 삭제된 학생 목록 새로고침
+        // 학생 목록 새로고침
         fetchStudents();
-        fetchDeletedStudents();
+        
+        // 모달 닫기 및 초기화
+        setShowRestoreModal(false);
+        setPendingStudentRestore(null);
+        
+        // 성공 메시지 표시 - 팝업 효과를 주기 위해 사용자 인터페이스에 명확하게 표시
         setMessage(data.message);
       } else {
         setMessage(data.message || '복구 실패: 서버 응답 오류');
+        setShowRestoreModal(false);
+        setPendingStudentRestore(null);
       }
-      
-      // 모달 닫기 및 초기화
-      setShowRestoreModal(false);
-      setPendingStudentRestore(null);
       
     } catch (error) {
       console.error('Error restoring student:', error);
