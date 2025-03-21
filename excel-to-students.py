@@ -13,13 +13,10 @@ def extract_students_with_duplicates(excel_file):
         sheet_names = xl.sheet_names
         print(f"엑셀 파일에서 발견된 시트: {sheet_names}")
         
-        all_students = []
+        raw_students = []  # 원래 이름으로 먼저 모든 학생 정보를 저장
         student_id = 1  # 전체 학생에 대한 ID
         
-        # 이름 중복 확인을 위한 딕셔너리
-        name_counter = {}
-        
-        # 각 시트별로 처리
+        # 각 시트별로 처리하여 raw_students에 먼저 모든 학생 정보 수집
         for sheet_name in sheet_names:
             print(f"\n--- '{sheet_name}' 시트 처리 중 ---")
             
@@ -62,7 +59,7 @@ def extract_students_with_duplicates(excel_file):
                     
                     students_in_sheet = []
                     
-                    # 학생 데이터 추출
+                    # 학생 데이터 추출 - 일단 원래 이름 그대로 저장
                     for idx, (_, row) in enumerate(df.iloc[start_row:].iterrows()):
                         # 이름 값 가져오기
                         if isinstance(name_column, (int, float)):
@@ -72,35 +69,20 @@ def extract_students_with_duplicates(excel_file):
                         
                         # 빈 값이나 NaN이 아닌 경우만 처리
                         if name_value and name_value.lower() != 'nan' and len(name_value) > 0:
-                            # 이름이 이미 있는지 확인하고 카운터 증가
-                            if name_value in name_counter:
-                                name_counter[name_value] += 1
-                                # 첫 번째 중복이면 기존 이름에 'A' 추가
-                                if name_counter[name_value] == 2:
-                                    # 이전 학생 찾아서 이름 수정
-                                    for s in all_students:
-                                        if s['name'] == name_value:
-                                            s['name'] = f"{name_value}A"
-                                            break
-                                # 현재 학생 이름에 알파벳 추가
-                                student_name = f"{name_value}{chr(64+name_counter[name_value])}"
-                            else:
-                                name_counter[name_value] = 1
-                                student_name = name_value
-                            
                             student = {
                                 "id": student_id,
-                                "name": student_name,
+                                "name": name_value,  # 원래 이름 그대로 저장
                                 "present": False,
                                 "code": "",
-                                "timestamp": None
+                                "timestamp": None,
+                                "original_name": name_value  # 원래 이름도 저장해 둠
                             }
                             students_in_sheet.append(student)
                             student_id += 1  # 다음 학생 ID
                     
                     if students_in_sheet:
                         print(f"{len(students_in_sheet)}명의 학생을 '{sheet_name}' 시트에서 추출했습니다.")
-                        all_students.extend(students_in_sheet)
+                        raw_students.extend(students_in_sheet)
                         break  # 성공적으로 데이터를 추출했으면 다음 헤더 위치 시도 중단
                     else:
                         print(f"'{sheet_name}' 시트에서 학생 데이터를 찾지 못했습니다. 다른 헤더 위치 시도.")
@@ -109,8 +91,53 @@ def extract_students_with_duplicates(excel_file):
                     print(f"헤더 행 {header_row}로 시도 중 오류 발생: {e}")
                     continue
         
-        print(f"\n총 {len(all_students)}명의 학생 데이터를 추출했습니다.")
-        return all_students
+        # 이름 중복 확인 및 처리
+        name_counter = {}
+        # 이름별 등장 인덱스 기록
+        name_indices = {}
+        final_students = []
+        
+        # 먼저 모든 이름의 등장 횟수를 카운트
+        for student in raw_students:
+            name = student["original_name"]
+            if name in name_counter:
+                name_counter[name] += 1
+            else:
+                name_counter[name] = 1
+                
+        # 중복 있는 이름에 대해 인덱스 배열 초기화
+        for name, count in name_counter.items():
+            if count > 1:
+                name_indices[name] = []
+        
+        # 이름 중복에 따라 최종 이름 결정
+        for student in raw_students:
+            name = student["original_name"]
+            
+            if name_counter[name] > 1:
+                # 이 이름에 대한 전체 인덱스 개수 확인
+                current_index = len(name_indices[name])
+                
+                # 새 이름 부여 (첫 번째는 A, 두 번째는 B, ...)
+                new_name = f"{name}{chr(65 + current_index)}"  # A=65, B=66, ...
+                student["name"] = new_name
+                
+                # 이 이름이 처리되었음을 기록
+                name_indices[name].append(new_name)
+            
+            # 더 이상 필요 없는 original_name 필드 제거
+            if "original_name" in student:
+                del student["original_name"]
+            
+            final_students.append(student)
+        
+        # 디버깅을 위한 동명이인 처리 결과 출력
+        print("\n동명이인 처리 결과:")
+        for name, variants in name_indices.items():
+            print(f"{name}: {', '.join(variants)}")
+        
+        print(f"\n총 {len(final_students)}명의 학생 데이터를 추출했습니다.")
+        return final_students
     
     except Exception as e:
         print(f"Excel 파일 처리 중 오류 발생: {e}")
@@ -118,16 +145,6 @@ def extract_students_with_duplicates(excel_file):
         traceback.print_exc()
         return []
 
-def save_students_to_json(students, json_file='students.json'):
-    """학생 데이터를 JSON 파일로 저장합니다."""
-    try:
-        with open(json_file, 'w', encoding='utf-8') as f:
-            json.dump(students, f, ensure_ascii=False, indent=4)
-        print(f"{len(students)}명의 학생 정보가 {json_file}에 저장되었습니다.")
-    except Exception as e:
-        print(f"JSON 파일 저장 중 오류 발생: {e}")
-
-# 수동으로 학생 이름을 입력하는 함수 (Excel 처리가 어려울 경우)
 def create_students_manually(names):
     """
     학생 이름 목록으로부터 students.json 파일을 생성합니다.
@@ -137,35 +154,64 @@ def create_students_manually(names):
     names = ["김민준", "이서연", "이수민", "이수민", "박지호"]
     결과: 이수민A, 이수민B로 저장됩니다.
     """
-    students = []
-    name_counter = {}
+    # 일단 중복 체크할 이름을 정리
+    processed_names = [name.strip() for name in names if name.strip()]
     
-    for idx, name in enumerate(names):
-        name = name.strip()
-        if name in name_counter:
-            name_counter[name] += 1
-            if name_counter[name] == 2:
-                # 이전 학생 찾아서 이름 수정
-                for s in students:
-                    if s['name'] == name:
-                        s['name'] = f"{name}A"
-                        break
-            # 현재 학생 이름에 알파벳 추가
-            student_name = f"{name}{chr(64+name_counter[name])}"
+    # 이름별 등장 횟수 계산
+    name_count = {}
+    for name in processed_names:
+        if name in name_count:
+            name_count[name] += 1
         else:
-            name_counter[name] = 1
-            student_name = name
+            name_count[name] = 1
+    
+    # 결과 딕셔너리 준비 (각 고유 이름에 인덱스 할당)
+    name_indices = {name: [] for name in name_count if name_count[name] > 1}
+    
+    # 최종 결과물
+    students = []
+    
+    # 모든 이름에 대해 처리
+    for idx, name in enumerate(processed_names):
+        final_name = name
         
+        # 이 이름이 중복되는 이름인 경우
+        if name_count[name] > 1:
+            # 이미 처리된 같은 이름의 수를 확인
+            same_name_count = len(name_indices[name])
+            
+            # 접미사 추가 (A, B, C, ...)
+            suffix = chr(65 + same_name_count)  # A=65, B=66, ...
+            final_name = f"{name}{suffix}"
+            
+            # 이 이름이 처리되었음을 기록
+            name_indices[name].append(final_name)
+        
+        # 학생 객체 생성
         student = {
             "id": idx + 1,
-            "name": student_name,
+            "name": final_name,
             "present": False,
             "code": "",
             "timestamp": None
         }
         students.append(student)
     
+    # 디버깅 출력
+    print("\n동명이인 처리 결과:")
+    for name, variants in name_indices.items():
+        print(f"{name}: {', '.join(variants)}")
+    
     return students
+
+def save_students_to_json(students, json_file='students.json'):
+    """학생 데이터를 JSON 파일로 저장합니다."""
+    try:
+        with open(json_file, 'w', encoding='utf-8') as f:
+            json.dump(students, f, ensure_ascii=False, indent=4)
+        print(f"{len(students)}명의 학생 정보가 {json_file}에 저장되었습니다.")
+    except Exception as e:
+        print(f"JSON 파일 저장 중 오류 발생: {e}")
 
 # 사용 예시
 if __name__ == "__main__":
@@ -188,7 +234,7 @@ if __name__ == "__main__":
         else:
             print("Excel 파일에서 학생 데이터를 추출할 수 없습니다.")
             
-            # 수동으로 학생 목록 입력 (예시)
+            # 수동으로 학생 목록 입력 (테스트)
             print("\nExcel 처리에 실패했습니다. 수동으로 학생 목록을 입력하세요.")
             student_names = [
                 "김민준", "이서연", "이수민", "이수민", "박지호", "정우진", "최수아", "이수민"
