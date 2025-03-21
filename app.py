@@ -289,23 +289,31 @@ def get_deleted_students():
     try:
         # 선생님 비밀번호 확인
         teacher_password = request.args.get('teacher_password')
+        print(f"[DEBUG] 삭제된 학생 목록 조회: 교사 비밀번호={teacher_password}")
         
         if teacher_password != 'teacher':  # 실제 구현 시 더 안전한 인증 방식 사용 권장
+            print("[DEBUG] 교사 비밀번호 불일치!")
             return jsonify({"success": False, "message": "선생님 비밀번호가 올바르지 않습니다."}), 401
         
         # 로그 파일 경로
         log_file = os.path.join('logs', 'deleted_students.json')
+        print(f"[DEBUG] 로그 파일 경로: {log_file}")
         
         # 삭제된 학생 목록 불러오기
         if os.path.exists(log_file):
+            print(f"[DEBUG] 로그 파일 존재: {os.path.getsize(log_file)} 바이트")
             with open(log_file, 'r', encoding='utf-8') as f:
                 deleted_students = json.load(f)
+            print(f"[DEBUG] 삭제된 학생 수: {len(deleted_students)}")
             return jsonify(deleted_students)
         else:
+            print("[DEBUG] 로그 파일 없음")
             return jsonify([])
             
     except Exception as e:
         print(f"삭제된 학생 목록 조회 중 오류 발생: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
 
 # 삭제된 학생 복구 API
@@ -315,7 +323,10 @@ def restore_student():
     
     try:
         data = request.json
-        student_id = data.get('student_id')
+        try:
+            student_id = int(data.get('student_id'))
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "학생 ID가 유효하지 않습니다."}), 400
         teacher_password = data.get('teacher_password')
         
         if teacher_password != 'teacher':  # 실제 구현 시 더 안전한 인증 방식 사용 권장

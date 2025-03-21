@@ -217,25 +217,31 @@ const AttendanceChecker = () => {
   // 삭제된 학생 목록 불러오기
   const fetchDeletedStudents = async () => {
     try {
+      console.log(`삭제된 학생 목록 조회 시도: 교사 비밀번호 길이=${teacherPassword.length}`);
+      
       const response = await fetch(`/api/students/deleted?teacher_password=${teacherPassword}`);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('삭제된 학생 목록:', data);
         setDeletedStudents(data);
         setShowDeletedStudents(true);
       } else {
         const data = await response.json();
-        setMessage(data.message);
+        console.error('삭제된 학생 목록 조회 실패:', data);
+        setMessage(data.message || '삭제된 학생 조회 실패');
       }
     } catch (error) {
       console.error('Error fetching deleted students:', error);
-      setMessage('서버 오류가 발생했습니다.');
+      setMessage('서버 오류가 발생했습니다. 개발자 콘솔을 확인하세요.');
     }
   };
 
   // 학생 복구하기
   const restoreStudent = async (studentId) => {
     try {
+      console.log(`복구 시도: 학생 ID=${studentId}, 교사 비밀번호 길이=${teacherPassword.length}`);
+      
       const response = await fetch('/api/students/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -246,6 +252,7 @@ const AttendanceChecker = () => {
       });
       
       const data = await response.json();
+      console.log('복구 응답:', data);
       
       if (response.ok) {
         // 학생 목록과 삭제된 학생 목록 새로고침
@@ -253,11 +260,11 @@ const AttendanceChecker = () => {
         fetchDeletedStudents();
         setMessage(data.message);
       } else {
-        setMessage(data.message);
+        setMessage(data.message || '복구 실패: 서버 응답 오류');
       }
     } catch (error) {
       console.error('Error restoring student:', error);
-      setMessage('서버 오류가 발생했습니다.');
+      setMessage('서버 오류가 발생했습니다. 개발자 콘솔을 확인하세요.');
     }
   };
 
