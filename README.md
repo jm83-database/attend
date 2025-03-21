@@ -86,9 +86,9 @@ pip install -r requirements.txt
    ```
    - 모든 학생에게 4자리 숫자로 구성된 비밀번호가 자동 생성됩니다.
 
-#### students.json 파일 형식
+4. students.json 파일 형식
 
-`students.json` 파일은 다음과 같은 형식의 JSON 배열을 포함합니다:
+   - `students.json` 파일은 다음과 같은 형식의 JSON 배열을 포함합니다:
 ```json
 [
     {
