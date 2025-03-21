@@ -77,6 +77,11 @@ jobs:
         with:
           name: python-app
           path: .
+      # 아래 Azure 로그인 단계 추가
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
