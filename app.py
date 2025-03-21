@@ -1,7 +1,9 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, Response
 import os
 import json
 import datetime
+import csv
+from io import StringIO
 
 app = Flask(__name__)
 
@@ -24,11 +26,11 @@ def load_students():
         else:
             # 기본 학생 목록 (파일이 없을 경우)
             students = [
-                {"id": 1, "name": "김민준", "present": False, "code": "", "timestamp": None},
-                {"id": 2, "name": "이서연", "present": False, "code": "", "timestamp": None},
-                {"id": 3, "name": "박지호", "present": False, "code": "", "timestamp": None},
-                {"id": 4, "name": "최수아", "present": False, "code": "", "timestamp": None},
-                {"id": 5, "name": "정우진", "present": False, "code": "", "timestamp": None},
+                {"id": 1, "name": "김민준", "password": "1234", "present": False, "code": "", "timestamp": None},
+                {"id": 2, "name": "이서연", "password": "2345", "present": False, "code": "", "timestamp": None},
+                {"id": 3, "name": "박지호", "password": "3456", "present": False, "code": "", "timestamp": None},
+                {"id": 4, "name": "최수아", "password": "4567", "present": False, "code": "", "timestamp": None},
+                {"id": 5, "name": "정우진", "password": "5678", "present": False, "code": "", "timestamp": None},
             ]
             # 학생 목록 저장
             save_students()
@@ -36,8 +38,8 @@ def load_students():
         print(f"학생 데이터 로드 중 오류 발생: {e}")
         # 오류 발생 시 기본 목록 사용
         students = [
-            {"id": 1, "name": "김민준", "present": False, "code": "", "timestamp": None},
-            {"id": 2, "name": "이서연", "present": False, "code": "", "timestamp": None},
+            {"id": 1, "name": "김민준", "password": "1234", "present": False, "code": "", "timestamp": None},
+            {"id": 2, "name": "이서연", "password": "2345", "present": False, "code": "", "timestamp": None},
         ]
 
 def save_students():
@@ -90,10 +92,21 @@ load_students()
 def index():
     return render_template('index.html')
 
-# API 엔드포인트: 학생 목록 가져오기
+# API 엔드포인트: 학생 목록 가져오기 (비밀번호 제외)
 @app.route('/api/students', methods=['GET'])
 def get_students():
-    return jsonify(students)
+    # 비밀번호를 제외한 학생 정보만 반환
+    students_without_password = []
+    for student in students:
+        student_data = {k: v for k, v in student.items() if k != 'password'}
+        students_without_password.append(student_data)
+    return jsonify(students_without_password)
+
+# API 엔드포인트: 학생 이름 목록 가져오기
+@app.route('/api/student-names', methods=['GET'])
+def get_student_names():
+    names = [{"id": student["id"], "name": student["name"]} for student in students]
+    return jsonify(names)
 
 # API 엔드포인트: 출석 코드 가져오기
 @app.route('/api/code', methods=['GET'])
@@ -109,22 +122,28 @@ def generate_code():
     current_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     return jsonify({"code": current_code})
 
-# API 엔드포인트: 출석 확인하기
+# API 엔드포인트: 출석 확인하기 (비밀번호 확인 추가)
 @app.route('/api/attendance', methods=['POST'])
 def check_attendance():
     global students
     data = request.json
     student_name = data.get('name')
     student_code = data.get('code')
+    student_password = data.get('password')  # 비밀번호 추가
     
-    if not student_name or not student_code:
-        return jsonify({"success": False, "message": "이름과 코드를 모두 입력해야 합니다."}), 400
+    if not student_name or not student_code or not student_password:
+        return jsonify({"success": False, "message": "이름, 코드, 비밀번호를 모두 입력해야 합니다."}), 400
     
     if student_code != current_code:
         return jsonify({"success": False, "message": "출석 코드가 일치하지 않습니다."}), 400
     
     for i, student in enumerate(students):
         if student['name'].lower() == student_name.lower():
+            # 비밀번호 확인 추가
+            if student['password'] != student_password:
+                return jsonify({"success": False, "message": "비밀번호가 일치하지 않습니다."}), 400
+                
+            import datetime
             students[i]['present'] = True
             students[i]['code'] = student_code
             students[i]['timestamp'] = datetime.datetime.now().strftime("%H:%M:%S")
@@ -149,14 +168,6 @@ def reset_attendance():
     save_attendance()
     
     return jsonify({"success": True, "message": "출석부가 초기화되었습니다."})
-
-
-# app.py에 추가할 코드
-
-import csv
-from io import StringIO
-from flask import send_file, Response
-import datetime
 
 # CSV 다운로드 API 엔드포인트
 @app.route('/api/attendance/download', methods=['GET'])
@@ -192,7 +203,7 @@ def download_attendance_csv():
         # 메모리 버퍼의 내용을 파일로 다운로드
         csv_buffer.seek(0)
         
-        # 현재 날짜로 파일명 생성
+        # 현재 날짜와 시간으로 파일명 생성 (년월일_시분)
         now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
         filename = f"attendance_{now}.csv"
         
@@ -206,6 +217,41 @@ def download_attendance_csv():
         print(f"CSV 다운로드 중 오류 발생: {e}")
         return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
 
+# 학생 비밀번호 다운로드 엔드포인트 (교사용)
+@app.route('/api/students/passwords', methods=['GET'])
+def download_student_passwords():
+    try:
+        # CSV 데이터 생성을 위한 메모리 버퍼
+        csv_buffer = StringIO()
+        csv_writer = csv.writer(csv_buffer)
+        
+        # CSV 헤더 작성
+        csv_writer.writerow(['학생ID', '이름', '비밀번호'])
+        
+        # 학생 비밀번호 정보를 CSV 형식으로 변환
+        for student in students:
+            csv_writer.writerow([
+                student.get('id', ''),
+                student.get('name', ''),
+                student.get('password', '')
+            ])
+        
+        # 메모리 버퍼의 내용을 파일로 다운로드
+        csv_buffer.seek(0)
+        
+        # 현재 날짜로 파일명 생성
+        now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        filename = f"student_passwords_{now}.csv"
+        
+        return Response(
+            csv_buffer.getvalue().encode('utf-8-sig'),  # UTF-8 with BOM for Excel compatibility
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment;filename={filename}'}
+        )
+        
+    except Exception as e:
+        print(f"비밀번호 다운로드 중 오류 발생: {e}")
+        return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
 
 if __name__ == '__main__':
     print("서버를 시작합니다...")

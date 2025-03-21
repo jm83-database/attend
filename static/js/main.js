@@ -4,6 +4,7 @@ const AttendanceChecker = () => {
   const [code, setCode] = React.useState('');
   const [studentCode, setStudentCode] = React.useState('');
   const [studentName, setStudentName] = React.useState('');
+  const [studentPassword, setStudentPassword] = React.useState('');  // 비밀번호 상태 추가
   const [confirmationMode, setConfirmationMode] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [currentTime, setCurrentTime] = React.useState(new Date());
@@ -80,6 +81,11 @@ const AttendanceChecker = () => {
       return;
     }
     
+    if (!studentPassword.trim()) {
+      setMessage('비밀번호를 입력해주세요.');
+      return;
+    }
+    
     try {
       const response = await fetch('/api/attendance', {
         method: 'POST',
@@ -88,7 +94,8 @@ const AttendanceChecker = () => {
         },
         body: JSON.stringify({
           name: studentName,
-          code: studentCode
+          code: studentCode,
+          password: studentPassword  // 비밀번호 추가
         })
       });
       
@@ -98,6 +105,7 @@ const AttendanceChecker = () => {
         fetchStudents(); // 학생 목록 새로고침
         setStudentName('');
         setStudentCode('');
+        setStudentPassword('');  // 비밀번호 초기화
       }
       
       setMessage(data.message);
@@ -135,10 +143,18 @@ const AttendanceChecker = () => {
     window.location.href = '/api/attendance/download';
   };
   
+  // 학생 비밀번호 CSV 다운로드 (선생님용)
+  const downloadStudentPasswords = () => {
+    window.location.href = '/api/students/passwords';
+  };
+  
   // 모드 전환
   const toggleMode = () => {
     setConfirmationMode(!confirmationMode);
     setMessage('');
+    setStudentName('');
+    setStudentCode('');
+    setStudentPassword('');
   };
   
   return (
@@ -177,6 +193,16 @@ const AttendanceChecker = () => {
                   value={studentCode}
                   onChange={e => setStudentCode(e.target.value)}
                   placeholder="선생님이 제공한 코드를 입력하세요"
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">개인 비밀번호</label>
+                <input
+                  type="password"
+                  value={studentPassword}
+                  onChange={e => setStudentPassword(e.target.value)}
+                  placeholder="개인 비밀번호를 입력하세요"
                   className="w-full p-2 border rounded"
                 />
               </div>
@@ -230,7 +256,7 @@ const AttendanceChecker = () => {
                 </div>
               </div>
               
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={resetAttendance}
                   className="mt-4 bg-red-600 text-white p-2 rounded hover:bg-red-700"
@@ -243,6 +269,13 @@ const AttendanceChecker = () => {
                   className="mt-4 bg-green-600 text-white p-2 rounded hover:bg-green-700"
                 >
                   출석부 CSV 다운로드
+                </button>
+                
+                <button
+                  onClick={downloadStudentPasswords}
+                  className="mt-4 bg-yellow-600 text-white p-2 rounded hover:bg-yellow-700"
+                >
+                  학생 비밀번호 다운로드
                 </button>
               </div>
             </div>
