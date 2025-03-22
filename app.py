@@ -54,9 +54,11 @@ def save_students():
 def save_attendance():
     """출석 상태를 JSON 파일로 저장합니다."""
     try:
+        # UTC+9(한국 시간) 적용
+        current_time = datetime.datetime.now() + datetime.timedelta(hours=9)
         attendance_data = {
-            "date": datetime.datetime.now().strftime("%Y-%m-%d"),
-            "time": datetime.datetime.now().strftime("%H:%M:%S"),
+            "date": current_time.strftime("%Y-%m-%d"),
+            "time": current_time.strftime("%H:%M:%S"),
             "students": students
         }
         
@@ -121,7 +123,9 @@ def get_code():
         generation_time = code_generation_time.strftime("%Y-%m-%d %H:%M:%S")
         # 코드 생성 후 경과 시간 계산 (초 단위)
         import datetime
-        elapsed_seconds = (datetime.datetime.now() - code_generation_time).total_seconds()
+        # UTC+9(한국 시간) 적용
+        current_time = datetime.datetime.now() + datetime.timedelta(hours=9)
+        elapsed_seconds = (current_time - code_generation_time).total_seconds()
         
         # 5분(300초) 유효 시간 설정
         validity_period = 300
@@ -158,7 +162,7 @@ def generate_code():
     
     # 새 코드 생성
     current_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    code_generation_time = datetime.datetime.now()
+    code_generation_time = datetime.datetime.now() + datetime.timedelta(hours=9)  # UTC+9(한국 시간) 적용
     
     # 코드 생성 로그 기록
     print(f"새 출석 코드 생성: {current_code} (생성 시간: {code_generation_time})")
@@ -188,7 +192,9 @@ def check_attendance():
     # 코드가 유효한지 확인 (5분 이내)
     if code_generation_time:
         import datetime
-        elapsed_seconds = (datetime.datetime.now() - code_generation_time).total_seconds()
+        # UTC+9(한국 시간) 적용
+        current_time = datetime.datetime.now() + datetime.timedelta(hours=9)
+        elapsed_seconds = (current_time - code_generation_time).total_seconds()
         if elapsed_seconds > 300:  # 5분(300초) 초과
             return jsonify({"success": False, "message": "출석 코드가 만료되었습니다. 새로운 코드를 요청하세요."}), 400
     
@@ -199,9 +205,11 @@ def check_attendance():
                 return jsonify({"success": False, "message": "비밀번호가 일치하지 않습니다."}), 400
                 
             import datetime
+            # UTC+9(한국 시간) 적용
+            current_time = datetime.datetime.now() + datetime.timedelta(hours=9)
             students[i]['present'] = True
             students[i]['code'] = student_code
-            students[i]['timestamp'] = datetime.datetime.now().strftime("%H:%M:%S")
+            students[i]['timestamp'] = current_time.strftime("%H:%M:%S")
             
             # 출석 정보 저장
             save_attendance()
@@ -259,7 +267,8 @@ def download_attendance_csv():
         csv_buffer.seek(0)
         
         # 현재 날짜와 시간으로 파일명 생성 (년월일_시분)
-        now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        # UTC+9(한국 시간) 적용
+        now = (datetime.datetime.now() + datetime.timedelta(hours=9)).strftime("%Y%m%d_%H%M")
         filename = f"attendance_{now}.csv"
         
         return Response(
@@ -325,8 +334,9 @@ def log_deleted_student(student):
             with open(log_file, 'r', encoding='utf-8') as f:
                 deleted_students = json.load(f)
         
-        # 현재 시간 추가
-        student['deleted_at'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # 현재 시간 추가 (UTC+9 한국 시간 적용)
+        current_time = datetime.datetime.now() + datetime.timedelta(hours=9)
+        student['deleted_at'] = current_time.strftime("%Y-%m-%d %H:%M:%S")
         
         # 삭제된 학생 정보 추가
         deleted_students.append(student)
@@ -454,7 +464,8 @@ def download_student_passwords():
         csv_buffer.seek(0)
         
         # 현재 날짜로 파일명 생성
-        now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        # UTC+9(한국 시간) 적용
+        now = (datetime.datetime.now() + datetime.timedelta(hours=9)).strftime("%Y%m%d_%H%M")
         filename = f"student_passwords_{now}.csv"
         
         return Response(

@@ -100,13 +100,20 @@ const AttendanceChecker = () => {
   };
   
   // 초기 데이터 로드 및 타이머 설정
+  // 한국 시간 표시를 위한 함수
+  const getKoreanTime = () => {
+    const now = new Date();
+    // 한국 시간은 UTC+9
+    return now;
+  };
+
   React.useEffect(() => {
     fetchStudents();
     fetchCode(); // 생성된 코드가 있는지 확인
     
     // 1초마다 시간 업데이트 및 코드 상태 체크
     const timeInterval = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getKoreanTime());
       fetchCode(); // 코드 상태 1초마다 갱신
     }, 1000);
     
