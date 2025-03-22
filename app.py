@@ -14,6 +14,7 @@ ATTENDANCE_FILE = 'attendance.json'
 # 출석 데이터를 저장할 변수
 students = []
 current_code = ""
+code_generation_time = None
 
 def load_students():
     """JSON 파일에서 학생 목록을 로드합니다."""
@@ -111,16 +112,38 @@ def get_student_names():
 # API 엔드포인트: 출석 코드 가져오기
 @app.route('/api/code', methods=['GET'])
 def get_code():
-    return jsonify({"code": current_code})
+    generation_time = ""
+    if code_generation_time:
+        generation_time = code_generation_time.strftime("%Y-%m-%d %H:%M:%S")
+    return jsonify({"code": current_code, "generationTime": generation_time})
 
-# API 엔드포인트: 새 출석 코드 생성
+# API 엔드포인트: 새 출석 코드 생성 (수동으로만 생성)
 @app.route('/api/code/generate', methods=['POST'])
 def generate_code():
     import random
     import string
-    global current_code
+    import datetime
+    global current_code, code_generation_time
+    
+    # 교사 비밀번호 확인 (보안 강화)
+    data = request.json
+    teacher_password = data.get('teacher_password')
+    
+    if teacher_password != 'teacher':  # 실제 구현 시 더 안전한 인증 방식 사용 권장
+        return jsonify({"success": False, "message": "선생님 비밀번호가 올바르지 않습니다."}), 401
+    
+    # 새 코드 생성
     current_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    return jsonify({"code": current_code})
+    code_generation_time = datetime.datetime.now()
+    
+    # 코드 생성 로그 기록
+    print(f"새 출석 코드 생성: {current_code} (생성 시간: {code_generation_time})")
+    
+    return jsonify({
+        "success": True,
+        "code": current_code,
+        "generationTime": code_generation_time.strftime("%Y-%m-%d %H:%M:%S")
+    })
 
 # API 엔드포인트: 출석 확인하기 (비밀번호 확인 추가)
 @app.route('/api/attendance', methods=['POST'])

@@ -2,6 +2,7 @@
 const AttendanceChecker = () => {
   const [students, setStudents] = React.useState([]);
   const [code, setCode] = React.useState('');
+  const [codeGenerationTime, setCodeGenerationTime] = React.useState(''); // 코드 생성 시간 추가
   const [studentCode, setStudentCode] = React.useState('');
   const [studentName, setStudentName] = React.useState('');
   const [studentPassword, setStudentPassword] = React.useState('');  // 비밀번호 상태 추가
@@ -17,7 +18,7 @@ const AttendanceChecker = () => {
   // 선생님 권한 확인을 위한 상태 추가
   const [showTeacherModal, setShowTeacherModal] = React.useState(false);
   const [teacherPassword, setTeacherPassword] = React.useState('');
-  const [pendingAction, setPendingAction] = React.useState(null); // 대기 중인 액션 (reset, downloadAttendance, downloadPasswords)
+  const [pendingAction, setPendingAction] = React.useState(null); // 대기 중인 액션 (reset, downloadAttendance, downloadPasswords, generateCode)
   
   // 학생 삭제 관련 상태 추가
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
@@ -58,37 +59,44 @@ const AttendanceChecker = () => {
       const response = await fetch('/api/code');
       const data = await response.json();
       setCode(data.code);
+      setCodeGenerationTime(data.generationTime || '');
     } catch (error) {
       console.error('Failed to fetch code:', error);
     }
   };
   
-  // 새 출석 코드 생성하기
+  // 새 출석 코드 생성하기 (선생님 비밀번호 필요)
   const generateNewCode = async () => {
     try {
       const response = await fetch('/api/code/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({
+          teacher_password: teacherPassword
+        })
       });
+      
       const data = await response.json();
-      setCode(data.code);
+      
+      if (response.ok) {
+        setCode(data.code);
+        setCodeGenerationTime(data.generationTime || '');
+        setMessage('새 출석 코드가 생성되었습니다.');
+      } else {
+        setMessage(data.message || '코드 생성 실패');
+      }
     } catch (error) {
       console.error('Failed to generate code:', error);
+      setMessage('서버 오류가 발생했습니다.');
     }
   };
   
   // 초기 데이터 로드 및 타이머 설정
   React.useEffect(() => {
     fetchStudents();
-    generateNewCode();
-    
-    // 5분마다 새로운 코드 생성
-    const interval = setInterval(() => {
-      generateNewCode();
-      setCurrentTime(new Date());
-    }, 300000);
+    fetchCode(); // 생성된 코드가 있는지 확인
     
     // 1초마다 시간 업데이트
     const timeInterval = setInterval(() => {
@@ -96,7 +104,6 @@ const AttendanceChecker = () => {
     }, 1000);
     
     return () => {
-      clearInterval(interval);
       clearInterval(timeInterval);
     };
   }, []);
@@ -190,6 +197,9 @@ const AttendanceChecker = () => {
         break;
       case 'viewDeletedStudents':
         fetchDeletedStudents();
+        break;
+      case 'generateCode':
+        generateNewCode();
         break;
     }
   };
@@ -616,8 +626,18 @@ const AttendanceChecker = () => {
                 {/* 출석 코드 카드 */}
                 <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-4 rounded-lg shadow-lg text-center text-white">
                   <div className="text-sm font-medium mb-1">현재 출석 코드</div>
-                  <div className="text-4xl font-bold tracking-wider">{code}</div>
-                  <div className="text-xs mt-1 text-blue-100">5분마다 자동으로 갱신됩니다</div>
+                  <div className="text-4xl font-bold tracking-wider">{code || '없음'}</div>
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="text-xs text-blue-100">
+                      {codeGenerationTime ? `생성 시간: ${codeGenerationTime}` : ''}
+                    </div>
+                    <button 
+                      onClick={() => openTeacherModal('generateCode')}
+                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 shadow-sm"
+                    >
+                      코드 생성
+                    </button>
+                  </div>
                 </div>
                 
                 {/* 출석률 카드 */}
