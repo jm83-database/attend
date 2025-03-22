@@ -420,6 +420,11 @@ def restore_student():
         # 삭제 시간 정보 제거
         if 'deleted_at' in student_to_restore:
             del student_to_restore['deleted_at']
+            
+        # 출석 상태 초기화
+        student_to_restore['present'] = False
+        student_to_restore['code'] = ""
+        student_to_restore['timestamp'] = None
         
         # 학생 목록에 복구
         students.append(student_to_restore)
@@ -439,6 +444,67 @@ def restore_student():
         
     except Exception as e:
         print(f"학생 복구 중 오류 발생: {e}")
+        return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
+
+# 일괄 삭제 API
+@app.route('/api/students/bulk-delete', methods=['POST'])
+def bulk_delete_students():
+    global students
+    
+    try:
+        data = request.json
+        print(f"[일괄 삭제 요청 데이터]: {data}")
+        student_ids = data.get('student_ids', [])
+        teacher_password = data.get('teacher_password')
+        
+        print(f"[일괄 삭제] 학생 IDs: {student_ids}, 비밀번호: {teacher_password}")
+        
+        # 선생님 비밀번호 확인
+        if teacher_password != 'teacher':
+            print(f"[일괄 삭제] 비밀번호 오류: {teacher_password}")
+            return jsonify({"success": False, "message": "선생님 비밀번호가 올바르지 않습니다."}), 401
+        
+        if not student_ids or not isinstance(student_ids, list):
+            print(f"[일괄 삭제] 학생 ID 오류: {student_ids}")
+            return jsonify({"success": False, "message": "삭제할 학생 ID가 지정되지 않았습니다."}), 400
+        
+        deleted_count = 0
+        deleted_students_info = []
+        
+        # 삭제할 학생 찾기 (정수 ID로 변환 후 비교)
+        student_ids = [int(id) for id in student_ids if str(id).isdigit()]
+        print(f"[일괄 삭제] 정수로 변환된 학생 IDs: {student_ids}")
+        
+        for student_id in student_ids:
+            # 학생 ID로 학생 찾기
+            for i, student in enumerate(students):
+                if student['id'] == student_id:
+                    student_to_delete = students.pop(i)
+                    # 삭제 로그 저장 (복구 가능하도록)
+                    log_deleted_student(student_to_delete)
+                    deleted_students_info.append({
+                        'id': student_to_delete['id'],
+                        'name': student_to_delete['name']
+                    })
+                    deleted_count += 1
+                    break
+        
+        print(f"[일괄 삭제] 삭제된 학생 수: {deleted_count}, 삭제된 학생: {deleted_students_info}")
+        
+        # 변경된 학생 목록 저장
+        save_students()
+        
+        return jsonify({
+            "success": True, 
+            "message": f"{deleted_count}명의 학생이 삭제되었습니다.",
+            "deleted_count": deleted_count,
+            "deleted_students": deleted_students_info
+        })
+        
+    except Exception as e:
+        print(f"학생 일괄 삭제 중 오류 발생: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
 
 # 학생 비밀번호 다운로드 엔드포인트 (교사용)

@@ -1,6 +1,82 @@
-// AttendanceChecker 컴포넌트
+  // 페이지 상단으로 스크롤
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+  
+  // 페이지 하단으로 스크롤
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'smooth'
+    });
+  };
+  
+  // 학생 목록 테이블로 스크롤
+  const scrollToStudentList = () => {
+    const studentList = document.getElementById('student-list-table');
+    if (studentList) {
+      studentList.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+    // 선택된 학생 개별 삭제 실행
+  const deleteSelectedStudentsOne = async () => {
+    if (selectedStudents.length === 0) return;
+    
+    try {
+      let deletedCount = 0;
+      const errors = [];
+      
+      // 선택된 학생을 하나씩 처리
+      for (const studentId of selectedStudents) {
+        console.log(`학생 ID ${studentId} 삭제 시도...`);
+        
+        try {
+          const response = await fetch(`/api/students/${studentId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teacher_password: multiDeletePassword })
+          });
+          
+          if (response.ok) {
+            deletedCount++;
+            console.log(`학생 ID ${studentId} 삭제 성공`);
+          } else {
+            const data = await response.json();
+            errors.push(`ID ${studentId}: ${data.message || '삭제 실패'}`);
+            console.error(`학생 ID ${studentId} 삭제 실패:`, data.message);
+          }
+        } catch (err) {
+          errors.push(`ID ${studentId}: 서버 오류`);
+          console.error(`학생 ID ${studentId} 삭제 중 오류:`, err);
+        }
+      }
+      
+      // 성공 시 목록 새로고침 및 선택 초기화
+      fetchStudents();
+      setSelectedStudents([]);
+      setSelectAll(false);
+      
+      if (errors.length > 0) {
+        setMessage(`${deletedCount}명 삭제 성공, ${errors.length}명 실패`);
+      } else {
+        setMessage(`${deletedCount}명의 학생이 삭제되었습니다.`);
+      }
+      
+      closeMultiDeleteModal();
+    } catch (error) {
+      console.error('Error in individual delete process:', error);
+      setMessage('서버 오류가 발생했습니다.');
+      closeMultiDeleteModal();
+    }
+  };// AttendanceChecker 컴포넌트
 const AttendanceChecker = () => {
   const [students, setStudents] = React.useState([]);
+  const [selectedStudents, setSelectedStudents] = React.useState([]);
+  const [selectAll, setSelectAll] = React.useState(false);
+  const [showMultiDeleteConfirm, setShowMultiDeleteConfirm] = React.useState(false);
   const [code, setCode] = React.useState('');
   const [codeGenerationTime, setCodeGenerationTime] = React.useState(''); // 코드 생성 시간 추가
   const [codeIsValid, setCodeIsValid] = React.useState(false); // 코드 유효 상태
@@ -28,11 +104,106 @@ const AttendanceChecker = () => {
   const [studentToDelete, setStudentToDelete] = React.useState(null);
   const [showDeletedStudents, setShowDeletedStudents] = React.useState(false);
   const [deletedStudents, setDeletedStudents] = React.useState([]);
+  const [multiDeletePassword, setMultiDeletePassword] = React.useState('');
   
   // 학생 복구 관련 상태 추가
   const [showRestoreModal, setShowRestoreModal] = React.useState(false);
   const [pendingStudentRestore, setPendingStudentRestore] = React.useState(null);
   
+  // 체크박스 선택 처리 함수
+  const handleSelectStudent = (studentId) => {
+    if (selectedStudents.includes(studentId)) {
+      setSelectedStudents(selectedStudents.filter(id => id !== studentId));
+    } else {
+      setSelectedStudents([...selectedStudents, studentId]);
+    }
+    // 모든 학생이 선택되었는지 체크
+    if (selectedStudents.length + 1 === students.length) {
+      setSelectAll(true);
+    } else {
+      setSelectAll(false);
+    }
+  };
+
+  // 전체 선택/해제 처리 함수
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(students.map(student => student.id));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  // 일괄 삭제 모달 열기
+  const openMultiDeleteModal = () => {
+    if (selectedStudents.length === 0) {
+      setMessage('삭제할 학생을 선택해주세요.');
+      return;
+    }
+    setMultiDeletePassword('');
+    setShowMultiDeleteConfirm(true);
+  };
+
+  // 일괄 삭제 모달 닫기
+  const closeMultiDeleteModal = () => {
+    setShowMultiDeleteConfirm(false);
+    setMultiDeletePassword('');
+  };
+
+  // 선택된 학생 일괄 삭제 실행
+  const deleteSelectedStudents = async () => {
+    if (selectedStudents.length === 0) return;
+    
+    try {
+      // 개별 삭제 방식으로 변경
+      let deletedCount = 0;
+      const errors = [];
+      
+      // 선택된 학생을 하나씩 처리
+      for (const studentId of selectedStudents) {
+        console.log(`학생 ID ${studentId} 삭제 시도...`);
+        
+        try {
+          const response = await fetch(`/api/students/${studentId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teacher_password: multiDeletePassword })
+          });
+          
+          if (response.ok) {
+            deletedCount++;
+            console.log(`학생 ID ${studentId} 삭제 성공`);
+          } else {
+            const data = await response.json();
+            errors.push(`ID ${studentId}: ${data.message || '삭제 실패'}`);
+            console.error(`학생 ID ${studentId} 삭제 실패:`, data.message);
+          }
+        } catch (err) {
+          errors.push(`ID ${studentId}: 서버 오류`);
+          console.error(`학생 ID ${studentId} 삭제 중 오류:`, err);
+        }
+      }
+      
+      // 성공 시 목록 새로고침 및 선택 초기화
+      fetchStudents();
+      setSelectedStudents([]);
+      setSelectAll(false);
+      
+      if (errors.length > 0) {
+        setMessage(`${deletedCount}명 삭제 성공, ${errors.length}명 실패`);
+      } else {
+        setMessage(`${deletedCount}명의 학생이 삭제되었습니다.`);
+      }
+      
+      closeMultiDeleteModal();
+    } catch (error) {
+      console.error('Error in individual delete process:', error);
+      setMessage('서버 오류가 발생했습니다.');
+      closeMultiDeleteModal();
+    }
+  };
+
   // 학생 목록 가져오기
   const fetchStudents = async () => {
     try {
@@ -517,6 +688,40 @@ const AttendanceChecker = () => {
         </div>
       )}
 
+      {/* 학생 일괄 삭제 확인 모달 */}
+      {showMultiDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-lg font-medium mb-4">학생 일괄 삭제 확인</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              <strong>{selectedStudents.length}명</strong>의 학생을 삭제하시겠습니까?
+              <br />이 작업은 되돌릴 수 있지만, 출석 기록은 초기화됩니다.
+            </p>
+            <input
+              type="password"
+              value={multiDeletePassword}
+              onChange={e => setMultiDeletePassword(e.target.value)}
+              placeholder="선생님 비밀번호"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeMultiDeleteModal}
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+              >
+                취소
+              </button>
+              <button
+                onClick={deleteSelectedStudents}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                일괄 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 학생 복구 확인 모달 (새로 추가) */}
       {showRestoreModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
@@ -605,6 +810,38 @@ const AttendanceChecker = () => {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden max-w-full">
+        {/* 플로팅 퀴 메뉴 */}
+        <div className="fixed right-4 bottom-4 flex flex-col gap-2 z-20">
+          <button 
+            onClick={scrollToTop}
+            className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors"
+            title="상단으로 이동"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </button>
+          
+          <button 
+            onClick={scrollToStudentList}
+            className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors"
+            title="학생 목록으로 이동"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </button>
+          
+          <button 
+            onClick={scrollToBottom}
+            className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors"
+            title="하단으로 이동"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </button>
+        </div>
         <div className="p-4 border-b">
           <div className="flex justify-between items-center mb-3">
             <div className="text-sm flex items-center gap-2">
@@ -738,14 +975,32 @@ const AttendanceChecker = () => {
               </div>
               
               <div className="mt-6">
-                <h3 className="text-lg font-medium mb-3 border-b pb-2 text-center">
-                  학생 목록
-                </h3>
+                <div className="flex justify-between items-center mb-3 border-b pb-2">
+                  <h3 className="text-lg font-medium">
+                    학생 목록
+                  </h3>
+                  {selectedStudents.length > 0 && (
+                    <button
+                      onClick={openMultiDeleteModal}
+                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex-shrink-0"
+                    >
+                      {selectedStudents.length}명 삭제
+                    </button>
+                  )}
+                </div>
                 
                 <div className="border rounded-lg overflow-x-auto shadow">
-                  <table className="min-w-full divide-y divide-gray-200">
+                  <table id="student-list-table" className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <input
+                            type="checkbox"
+                            checked={selectAll}
+                            onChange={handleSelectAll}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                          />
+                        </th>
                         <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
                         <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">출석 상태</th>
                         <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">확인 시간</th>
@@ -755,6 +1010,14 @@ const AttendanceChecker = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {students.map(student => (
                         <tr key={student.id} className={student.present ? "bg-green-50" : ""}>
+                          <td className="px-2 sm:px-3 py-2 sm:py-4 whitespace-nowrap text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedStudents.includes(student.id)}
+                              onChange={() => handleSelectStudent(student.id)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                            />
+                          </td>
                           <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap font-medium text-center">{student.name}</td>
                           <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-center">
                             <span className={`inline-flex px-2 py-1 text-xs rounded-full ${student.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
