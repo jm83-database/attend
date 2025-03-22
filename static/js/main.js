@@ -107,6 +107,39 @@ const AttendanceChecker = () => {
     return now;
   };
 
+  // 코드 유효 상태가 변경될 때 학생 목록 인터벌을 관리하기 위한 인터벌 참조 상태
+  const studentsIntervalRef = React.useRef(null);
+
+  // 학생 목록 갱신 인터벌 설정/해제 함수
+  const manageStudentsInterval = (isCodeValid) => {
+    // 기존 인터벌이 있으면 제거
+    if (studentsIntervalRef.current) {
+      clearInterval(studentsIntervalRef.current);
+      studentsIntervalRef.current = null;
+    }
+    
+    // 코드가 유효한 경우에만 인터벌 설정
+    if (isCodeValid) {
+      studentsIntervalRef.current = setInterval(() => {
+        fetchStudents();
+      }, 3000);
+    } else {
+      // 코드가 유효하지 않을 때는 한 번만 학생 목록 갱신
+      fetchStudents();
+    }
+  };
+
+  // 코드 상태가 변경될 때 학생 목록 인터벌 관리
+  React.useEffect(() => {
+    manageStudentsInterval(codeIsValid);
+    
+    return () => {
+      if (studentsIntervalRef.current) {
+        clearInterval(studentsIntervalRef.current);
+      }
+    };
+  }, [codeIsValid]);
+
   React.useEffect(() => {
     fetchStudents();
     fetchCode(); // 생성된 코드가 있는지 확인
@@ -117,14 +150,11 @@ const AttendanceChecker = () => {
       fetchCode(); // 코드 상태 1초마다 갱신
     }, 1000);
     
-    // 3초마다 학생 목록 새로고침 - 학생 출석 현황을 자동으로 반영
-    const studentsInterval = setInterval(() => {
-      fetchStudents();
-    }, 3000);
-    
     return () => {
       clearInterval(timeInterval);
-      clearInterval(studentsInterval);
+      if (studentsIntervalRef.current) {
+        clearInterval(studentsIntervalRef.current);
+      }
     };
   }, []);
   
@@ -533,21 +563,21 @@ const AttendanceChecker = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">삭제 시간</th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">삭제 시간</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {deletedStudents.map(student => (
                       <tr key={student.id}>
-                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">{student.id}</td>
-                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">{student.name}</td>
-                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-center">{student.id}</td>
+                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-center">{student.name}</td>
+                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                           {student.deleted_at || '-'}
                         </td>
-                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
+                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-center">
                           <button
                             onClick={() => restoreStudent(student.id)}
                             className="text-blue-600 hover:text-blue-800 text-sm"
@@ -716,25 +746,25 @@ const AttendanceChecker = () => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">출석 상태</th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">확인 시간</th>
-                        <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
+                        <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
+                        <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">출석 상태</th>
+                        <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">확인 시간</th>
+                        <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {students.map(student => (
                         <tr key={student.id} className={student.present ? "bg-green-50" : ""}>
-                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap font-medium">{student.name}</td>
-                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap font-medium text-center">{student.name}</td>
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-center">
                             <span className={`inline-flex px-2 py-1 text-xs rounded-full ${student.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                               {student.present ? '출석' : '미출석'}
                             </span>
                           </td>
-                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                             {student.timestamp || '-'}
                           </td>
-                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-right">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-center">
                             <button
                               onClick={() => openDeleteModal(student)}
                               className="text-red-600 hover:text-red-800 text-sm hover:underline"
