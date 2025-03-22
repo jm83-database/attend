@@ -113,9 +113,33 @@ def get_student_names():
 @app.route('/api/code', methods=['GET'])
 def get_code():
     generation_time = ""
-    if code_generation_time:
+    is_valid = False
+    is_expired = False
+    time_remaining = 0
+    
+    if code_generation_time and current_code:
         generation_time = code_generation_time.strftime("%Y-%m-%d %H:%M:%S")
-    return jsonify({"code": current_code, "generationTime": generation_time})
+        # 코드 생성 후 경과 시간 계산 (초 단위)
+        import datetime
+        elapsed_seconds = (datetime.datetime.now() - code_generation_time).total_seconds()
+        
+        # 5분(300초) 유효 시간 설정
+        validity_period = 300
+        
+        # 유효 시간 이내인지 확인
+        is_valid = elapsed_seconds < validity_period
+        is_expired = not is_valid and current_code != ""
+        
+        # 남은 시간 계산 (초 단위)
+        time_remaining = max(0, validity_period - elapsed_seconds) if is_valid else 0
+        
+    return jsonify({
+        "code": current_code, 
+        "generationTime": generation_time,
+        "isValid": is_valid,
+        "isExpired": is_expired,
+        "timeRemaining": int(time_remaining)
+    })
 
 # API 엔드포인트: 새 출석 코드 생성 (수동으로만 생성)
 @app.route('/api/code/generate', methods=['POST'])
@@ -157,8 +181,16 @@ def check_attendance():
     if not student_name or not student_code or not student_password:
         return jsonify({"success": False, "message": "이름, 코드, 비밀번호를 모두 입력해야 합니다."}), 400
     
+    # 코드가 일치하는지 확인
     if student_code != current_code:
         return jsonify({"success": False, "message": "출석 코드가 일치하지 않습니다."}), 400
+    
+    # 코드가 유효한지 확인 (5분 이내)
+    if code_generation_time:
+        import datetime
+        elapsed_seconds = (datetime.datetime.now() - code_generation_time).total_seconds()
+        if elapsed_seconds > 300:  # 5분(300초) 초과
+            return jsonify({"success": False, "message": "출석 코드가 만료되었습니다. 새로운 코드를 요청하세요."}), 400
     
     for i, student in enumerate(students):
         if student['name'].lower() == student_name.lower():

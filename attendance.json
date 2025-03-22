@@ -1,7 +1,7 @@
 [
     {
         "date": "2025-03-22",
-        "time": "12:03:45",
+        "time": "12:54:55",
         "students": [
             {
                 "id": 2,
@@ -894,9 +894,9 @@
             {
                 "id": 1,
                 "name": "강유라",
-                "present": false,
-                "code": "",
-                "timestamp": null,
+                "present": true,
+                "code": "Q047AN",
+                "timestamp": "12:54:55",
                 "password": "9272"
             },
             {

@@ -3,6 +3,9 @@ const AttendanceChecker = () => {
   const [students, setStudents] = React.useState([]);
   const [code, setCode] = React.useState('');
   const [codeGenerationTime, setCodeGenerationTime] = React.useState(''); // 코드 생성 시간 추가
+  const [codeIsValid, setCodeIsValid] = React.useState(false); // 코드 유효 상태
+  const [codeIsExpired, setCodeIsExpired] = React.useState(false); // 코드 만료 상태
+  const [timeRemaining, setTimeRemaining] = React.useState(0); // 남은 시간
   const [studentCode, setStudentCode] = React.useState('');
   const [studentName, setStudentName] = React.useState('');
   const [studentPassword, setStudentPassword] = React.useState('');  // 비밀번호 상태 추가
@@ -60,6 +63,9 @@ const AttendanceChecker = () => {
       const data = await response.json();
       setCode(data.code);
       setCodeGenerationTime(data.generationTime || '');
+      setCodeIsValid(data.isValid);
+      setCodeIsExpired(data.isExpired);
+      setTimeRemaining(data.timeRemaining);
     } catch (error) {
       console.error('Failed to fetch code:', error);
     }
@@ -98,9 +104,10 @@ const AttendanceChecker = () => {
     fetchStudents();
     fetchCode(); // 생성된 코드가 있는지 확인
     
-    // 1초마다 시간 업데이트
+    // 1초마다 시간 업데이트 및 코드 상태 체크
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date());
+      fetchCode(); // 코드 상태 1초마다 갱신
     }, 1000);
     
     return () => {
@@ -577,6 +584,20 @@ const AttendanceChecker = () => {
         <div className="p-4">
           {confirmationMode ? (
             <div className="space-y-4">
+              {/* 유효한 코드가 없을 때 알림 표시 */}
+              {(!codeIsValid && code) && (
+                <div className="bg-red-100 text-red-800 p-3 rounded-lg text-center font-medium mb-4">
+                  출석 코드가 만료되었습니다. 선생님에게 새 코드를 요청하세요.
+                </div>
+              )}
+              {codeIsValid && (
+                <div className="bg-green-100 text-green-800 p-3 rounded-lg text-center font-medium mb-4">
+                  현재 코드: <span className="font-bold">{code}</span>
+                  <div className="text-xs mt-1">
+                    유효시간: {Math.floor(timeRemaining / 60)}분 {timeRemaining % 60}초 남음
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">이름</label>
                 <input
@@ -610,6 +631,7 @@ const AttendanceChecker = () => {
               <button 
                 onClick={handleConfirmAttendance}
                 className="w-full mt-4 bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+                disabled={!codeIsValid}
               >
                 출석 확인
               </button>
@@ -624,9 +646,21 @@ const AttendanceChecker = () => {
               {/* 출석 코드와 출석률을 나란히 배치하는 카드 디자인 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                 {/* 출석 코드 카드 */}
-                <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-4 rounded-lg shadow-lg text-center text-white">
+                <div className={`bg-gradient-to-r ${codeIsValid ? 'from-blue-500 to-blue-700' : codeIsExpired ? 'from-red-500 to-red-700' : 'from-gray-500 to-gray-700'} p-4 rounded-lg shadow-lg text-center text-white`}>
                   <div className="text-sm font-medium mb-1">현재 출석 코드</div>
                   <div className="text-4xl font-bold tracking-wider">{code || '없음'}</div>
+                  <div className="mt-2 text-sm font-medium">
+                    {codeIsValid && (
+                      <span className="inline-block px-2 py-1 bg-green-600 rounded-full text-xs">
+                        유효: {Math.floor(timeRemaining / 60)}분 {timeRemaining % 60}초 남음
+                      </span>
+                    )}
+                    {codeIsExpired && (
+                      <span className="inline-block px-2 py-1 bg-red-600 rounded-full text-xs">
+                        만료됨
+                      </span>
+                    )}
+                  </div>
                   <div className="flex justify-between items-center mt-2">
                     <div className="text-xs text-blue-100">
                       {codeGenerationTime ? `생성 시간: ${codeGenerationTime}` : ''}
