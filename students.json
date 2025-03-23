@@ -888,19 +888,19 @@
         "password": "3194"
     },
     {
-        "id": 1,
-        "name": "강유라",
-        "present": true,
-        "code": "M8W12U",
-        "timestamp": "02:43:52",
-        "password": "9272"
-    },
-    {
         "id": 109,
         "name": "지중헌",
         "present": false,
         "code": "",
         "timestamp": null,
         "password": "3020"
+    },
+    {
+        "id": 1,
+        "name": "강유라",
+        "present": false,
+        "code": "",
+        "timestamp": null,
+        "password": "9272"
     }
 ]

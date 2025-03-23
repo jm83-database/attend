@@ -204,6 +204,11 @@ const AttendanceChecker = () => {
     }
   };
 
+  // 모달이 열렸는지 확인하는 함수
+  const isAnyModalOpen = () => {
+    return showTeacherModal || showDeleteConfirm || showMultiDeleteConfirm || showRestoreModal || showDeletedStudents;
+  };
+  
   // 학생 목록 가져오기
   const fetchStudents = async () => {
     try {
@@ -625,8 +630,8 @@ const AttendanceChecker = () => {
     <div className="w-full max-w-4xl mx-auto p-2 sm:p-4">
       {/* 선생님 비밀번호 확인 모달 */}
       {showTeacherModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-medium mb-4">선생님 인증</h3>
             <p className="text-sm text-gray-600 mb-4">선생님 비밀번호를 입력해주세요.</p>
             <input
@@ -656,8 +661,8 @@ const AttendanceChecker = () => {
 
       {/* 학생 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-medium mb-4">학생 삭제 확인</h3>
             <p className="text-sm text-gray-600 mb-4">
               <strong>{studentToDelete && studentToDelete.name}</strong> 학생을 삭제하시겠습니까?
@@ -690,8 +695,8 @@ const AttendanceChecker = () => {
 
       {/* 학생 일괄 삭제 확인 모달 */}
       {showMultiDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-medium mb-4">학생 일괄 삭제 확인</h3>
             <p className="text-sm text-gray-600 mb-4">
               <strong>{selectedStudents.length}명</strong>의 학생을 삭제하시겠습니까?
@@ -724,8 +729,8 @@ const AttendanceChecker = () => {
 
       {/* 학생 복구 확인 모달 (새로 추가) */}
       {showRestoreModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-medium mb-4">학생 복구 확인</h3>
             <p className="text-sm text-gray-600 mb-4">
               학생을 복구하려면 선생님 비밀번호를 입력하세요.
@@ -757,14 +762,14 @@ const AttendanceChecker = () => {
 
       {/* 삭제된 학생 목록 모달 */}
       {showDeletedStudents && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-medium mb-4">삭제된 학생 목록</h3>
             
             {deletedStudents.length === 0 ? (
               <p className="text-gray-600">삭제된 학생이 없습니다.</p>
             ) : (
-              <div className="overflow-x-auto max-h-96">
+              <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -842,27 +847,120 @@ const AttendanceChecker = () => {
             </svg>
           </button>
         </div>
-        <div className="p-4 border-b">
-          <div className="flex justify-between items-center mb-3">
-            <div className="text-sm flex items-center gap-2">
-              <span className="inline-block w-4 h-4">⏰</span>
-              {currentTime.toLocaleTimeString()}
+        {/* 고정 헤더 영역 (학생 모드에서는 표시 안함, 모달 열렸을 때도 숨김) */}
+        {!confirmationMode && !isAnyModalOpen() && (
+          <div className="fixed left-0 right-0 top-0 z-50 bg-white shadow-lg border-b border-gray-200">
+            <div className="max-w-4xl mx-auto p-3">
+              {/* 헤더 상단 */}
+              <div className="flex justify-between items-center mb-3">
+                <div className="text-sm flex items-center gap-2">
+                  <span className="inline-block w-4 h-4">⏰</span>
+                  {currentTime.toLocaleTimeString()}
+                </div>
+                <button
+                  onClick={toggleMode}
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-md"
+                >
+                  학생 모드로 전환
+                </button>
+              </div>
+              
+              {/* 시스템 타이틀 */}
+              <div className="text-center mb-3">
+                <h2 className="text-xl font-bold text-indigo-800">온라인 수업 출석 확인 시스템</h2>
+                <p className="text-xs text-indigo-600 mt-1 font-medium inline-block px-3 py-1 bg-indigo-100 rounded-full">
+                  선생님 관리 모드
+                </p>
+              </div>
+              
+              {/* 출석 카드 영역 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4 mb-3">
+                {/* 출석 코드 카드 */}
+                <div className={`bg-gradient-to-r ${codeIsValid ? 'from-blue-500 to-blue-700' : codeIsExpired ? 'from-red-500 to-red-700' : 'from-gray-500 to-gray-700'} p-3 rounded-lg shadow-md text-center text-white`}>
+                  <div className="text-xs font-medium">수업 출석 코드</div>
+                  <div className="text-2xl font-bold tracking-wider">{code || '없음'}</div>
+                  <div className="mt-1 text-xs font-medium">
+                    {codeIsValid && (
+                      <span className="inline-block px-2 py-0.5 bg-green-600 rounded-full text-xs">
+                        유효: {Math.floor(timeRemaining / 60)}분 {timeRemaining % 60}초 남음
+                      </span>
+                    )}
+                    {codeIsExpired && (
+                      <span className="inline-block px-2 py-0.5 bg-red-600 rounded-full text-xs">
+                        만료됨
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <div className="text-xs text-blue-100">
+                      {codeGenerationTime ? `생성: ${codeGenerationTime}` : ''}
+                    </div>
+                    <button 
+                      onClick={() => openTeacherModal('generateCode')}
+                      className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 shadow-sm"
+                    >
+                      코드 생성
+                    </button>
+                  </div>
+                </div>
+                
+                {/* 출석률 카드 */}
+                <div className="bg-gradient-to-r from-green-500 to-green-700 p-3 rounded-lg shadow-md">
+                  <div className="flex justify-between items-center text-white">
+                    <div className="text-xs font-medium">현재 출석률</div>
+                    <div className="text-sm font-bold">{presentCount}/{totalCount}명 ({attendanceRate}%)</div>
+                  </div>
+                  <div className="w-full bg-white bg-opacity-30 rounded-full h-3 mt-2">
+                    <div 
+                      className="bg-white h-3 rounded-full" 
+                      style={{ width: `${attendanceRate}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 학생 목록 헤더 */}
+              <div className="relative mb-3 pb-2 border-b">
+                <h3 className="text-lg font-medium text-center">
+                  학생 목록
+                </h3>
+                {selectedStudents.length > 0 && (
+                  <button
+                    onClick={openMultiDeleteModal}
+                    className="absolute right-0 top-0 px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex-shrink-0"
+                  >
+                    {selectedStudents.length}명 삭제
+                  </button>
+                )}
+              </div>
             </div>
-            <button
-              onClick={toggleMode}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-md"
-            >
-              {confirmationMode ? '선생님 모드로 전환' : '학생 모드로 전환'}
-            </button>
           </div>
-          
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-indigo-800">온라인 수업 출석 확인 시스템</h2>
-            <p className="text-sm text-indigo-600 mt-1 font-medium inline-block px-3 py-1 bg-indigo-100 rounded-full">
-              {confirmationMode ? '학생 출석 확인 모드' : '선생님 관리 모드'}
-            </p>
+        )}
+        
+        {/* 학생 모드일 때 표시되는 일반 헤더 - 모달 열렸을 때는 숨김 */}
+        {confirmationMode && !isAnyModalOpen() && (
+          <div className="p-4 border-b">
+            <div className="flex justify-between items-center mb-3">
+              <div className="text-sm flex items-center gap-2">
+                <span className="inline-block w-4 h-4">⏰</span>
+                {currentTime.toLocaleTimeString()}
+              </div>
+              <button
+                onClick={toggleMode}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-md"
+              >
+                선생님 모드로 전환
+              </button>
+            </div>
+            
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-indigo-800">온라인 수업 출석 확인 시스템</h2>
+              <p className="text-sm text-indigo-600 mt-1 font-medium inline-block px-3 py-1 bg-indigo-100 rounded-full">
+                학생 출석 확인 모드
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         
         <div className="p-4">
           {confirmationMode ? (
@@ -928,66 +1026,10 @@ const AttendanceChecker = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* 출석 코드와 출석률을 나란히 배치하는 카드 디자인 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4 mb-2">
-                {/* 출석 코드 카드 */}
-                <div className={`bg-gradient-to-r ${codeIsValid ? 'from-blue-500 to-blue-700' : codeIsExpired ? 'from-red-500 to-red-700' : 'from-gray-500 to-gray-700'} p-4 rounded-lg shadow-lg text-center text-white`}>
-                  <div className="text-sm font-medium mb-1">현재 출석 코드</div>
-                  <div className="text-4xl font-bold tracking-wider">{code || '없음'}</div>
-                  <div className="mt-2 text-sm font-medium">
-                    {codeIsValid && (
-                      <span className="inline-block px-2 py-1 bg-green-600 rounded-full text-xs">
-                        유효: {Math.floor(timeRemaining / 60)}분 {timeRemaining % 60}초 남음
-                      </span>
-                    )}
-                    {codeIsExpired && (
-                      <span className="inline-block px-2 py-1 bg-red-600 rounded-full text-xs">
-                        만료됨
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="text-xs text-blue-100">
-                      {codeGenerationTime ? `생성 시간: ${codeGenerationTime}` : ''}
-                    </div>
-                    <button 
-                      onClick={() => openTeacherModal('generateCode')}
-                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 shadow-sm"
-                    >
-                      코드 생성
-                    </button>
-                  </div>
-                </div>
-                
-                {/* 출석률 카드 */}
-                <div className="bg-gradient-to-r from-green-500 to-green-700 p-4 rounded-lg shadow-lg">
-                  <div className="flex justify-between items-center mb-1 text-white">
-                    <div className="text-sm font-medium">현재 출석률</div>
-                    <div className="text-lg font-bold">{presentCount}/{totalCount}명 ({attendanceRate}%)</div>
-                  </div>
-                  <div className="w-full bg-white bg-opacity-30 rounded-full h-3">
-                    <div 
-                      className="bg-white h-3 rounded-full" 
-                      style={{ width: `${attendanceRate}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
+              {/* 헤더 높이를 맞춤으로 내용이 가려지지 않도록 하는 여백 - 모달 열렸을 때는 여백 낮게 조정 */}
+              <div className={`${isAnyModalOpen() ? 'h-10' : 'h-80 md:h-72'}`}></div>
               
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-3 border-b pb-2">
-                  <h3 className="text-lg font-medium">
-                    학생 목록
-                  </h3>
-                  {selectedStudents.length > 0 && (
-                    <button
-                      onClick={openMultiDeleteModal}
-                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex-shrink-0"
-                    >
-                      {selectedStudents.length}명 삭제
-                    </button>
-                  )}
-                </div>
+              <div className="mt-3">
                 
                 <div className="border rounded-lg overflow-x-auto shadow">
                   <table id="student-list-table" className="min-w-full divide-y divide-gray-200">
