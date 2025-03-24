@@ -763,20 +763,20 @@ const AttendanceChecker = () => {
       {/* 삭제된 학생 목록 모달 */}
       {showDeletedStudents && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
             <h3 className="text-lg font-medium mb-4">삭제된 학생 목록</h3>
             
             {deletedStudents.length === 0 ? (
               <p className="text-gray-600">삭제된 학생이 없습니다.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="h-64 overflow-y-auto border border-gray-200 rounded mb-4">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
-                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
-                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">삭제 시간</th>
-                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">ID</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">이름</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">삭제 시간</th>
+                      <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">작업</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -802,7 +802,7 @@ const AttendanceChecker = () => {
               </div>
             )}
             
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-end">
               <button
                 onClick={closeDeletedStudentsModal}
                 className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
