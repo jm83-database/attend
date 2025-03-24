@@ -10,10 +10,137 @@
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <style>
+        .help-button {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            z-index: 50;
+            transition: transform 0.3s ease;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+        }
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            overflow: auto;
+        }
+        .help-modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .help-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .help-close:hover {
+            color: #555;
+        }
+        .help-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .help-section:last-child {
+            border-bottom: none;
+        }
+        @media (max-width: 640px) {
+            .help-modal-content {
+                margin: 10% auto;
+                width: 95%;
+                padding: 15px;
+            }
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div id="app" class="container mx-auto py-8"></div>
 
+    <!-- 도움말 버튼 -->
+    <div class="help-button" id="helpButton">
+        <img src="{{ url_for('static', filename='images/question-mark.svg') }}" alt="도움말" class="w-full h-full">
+    </div>
+
+    <!-- 도움말 모달 -->
+    <div id="helpModal" class="help-modal">
+        <div class="help-modal-content">
+            <span class="help-close" id="closeHelpModal">&times;</span>
+            <h2 class="text-2xl font-bold text-center text-indigo-800 mb-6">출석 시스템 사용 방법</h2>
+            
+            <div class="help-section">
+                <h3 class="text-xl font-semibold text-indigo-700 mb-3">학생 모드</h3>
+                <p class="mb-2"><span class="font-medium">1.</span> 상단의 <span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">학생 모드로 전환</span> 버튼을 클릭하여 학생 모드로 전환합니다.</p>
+                <p class="mb-2"><span class="font-medium">2.</span> 이름, 선생님이 제공한 출석 코드, 개인 비밀번호를 입력합니다.</p>
+                <p class="mb-2"><span class="font-medium">3.</span> <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">출석 확인</span> 버튼을 클릭하여 출석을 완료합니다.</p>
+                <p class="mb-2"><span class="font-medium">4.</span> 출석이 확인되면 성공 메시지가 표시됩니다.</p>
+                <p class="text-sm text-gray-600 mt-3">* 출석 코드는 제한된 시간 동안만 유효합니다. 만료된 코드로는 출석할 수 없습니다.</p>
+            </div>
+            
+            <div class="help-section">
+                <h3 class="text-xl font-semibold text-indigo-700 mb-3">선생님 모드</h3>
+                <p class="mb-2"><span class="font-medium">1.</span> 상단의 <span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">선생님 모드로 전환</span> 버튼을 클릭합니다.</p>
+                <p class="mb-2"><span class="font-medium">2.</span> 출석 코드 생성: <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">코드 생성</span> 버튼을 클릭하여 새 출석 코드를 생성합니다.</p>
+                <p class="mb-2"><span class="font-medium">3.</span> 학생 관리: 학생 목록에서 출석 현황을 확인할 수 있습니다.</p>
+                <p class="mb-2"><span class="font-medium">4.</span> 학생 삭제: 특정 학생을 삭제하려면 해당 학생 행의 <span class="text-red-600">삭제</span> 버튼을 클릭합니다.</p>
+                <p class="mb-2"><span class="font-medium">5.</span> 다수 학생 삭제: 학생 선택 후 <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-sm">n명 삭제</span> 버튼을 클릭합니다.</p>
+            </div>
+            
+            <div class="help-section">
+                <h3 class="text-xl font-semibold text-indigo-700 mb-3">추가 기능</h3>
+                <p class="mb-2"><span class="font-medium">출석부 초기화:</span> 모든 학생의 출석 상태를 초기화합니다.</p>
+                <p class="mb-2"><span class="font-medium">출석부 다운로드:</span> 현재 출석 현황을 CSV 파일로 다운로드합니다.</p>
+                <p class="mb-2"><span class="font-medium">비밀번호 다운로드:</span> 학생 비밀번호 목록을 CSV 파일로 다운로드합니다.</p>
+                <p class="mb-2"><span class="font-medium">삭제된 학생:</span> 삭제된 학생 목록을 확인하고 필요시 복구할 수 있습니다.</p>
+            </div>
+        </div>
+    </div>
+
     <script type="text/babel" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <script>
+        // 도움말 기능 JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            const helpButton = document.getElementById('helpButton');
+            const helpModal = document.getElementById('helpModal');
+            const closeHelpModal = document.getElementById('closeHelpModal');
+            
+            // 도움말 버튼 클릭 시 모달 표시
+            helpButton.addEventListener('click', function() {
+                helpModal.style.display = 'block';
+            });
+            
+            // 닫기 버튼 클릭 시 모달 닫기
+            closeHelpModal.addEventListener('click', function() {
+                helpModal.style.display = 'none';
+            });
+            
+            // 모달 외부 클릭 시 모달 닫기
+            window.addEventListener('click', function(event) {
+                if (event.target == helpModal) {
+                    helpModal.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
