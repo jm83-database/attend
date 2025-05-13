@@ -227,12 +227,22 @@ def reset_attendance():
         students[i]['code'] = ""
         students[i]['timestamp'] = None
     
-    # 출석 정보 저장
-    save_attendance()
-    
-    return jsonify({"success": True, "message": "출석부가 초기화되었습니다."})
+    # 기존 출석 기록 완전히 삭제하고 새로 시작
+    try:
+        # 빈 출석 기록으로 파일 초기화
+        with open(ATTENDANCE_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, ensure_ascii=False, indent=4)
+        
+        # 현재 상태(초기화된 상태)만 저장
+        save_attendance()
+        
+        return jsonify({"success": True, "message": "모든 출석 기록이 초기화되었습니다."})
+    except Exception as e:
+        print(f"출석부 초기화 중 오류 발생: {e}")
+        return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
 
 # CSV 다운로드 API 엔드포인트
+# CSV 다운로드 API 엔드포인트 (삭제된 학생 제외)
 @app.route('/api/attendance/download', methods=['GET'])
 def download_attendance_csv():
     try:
@@ -243,6 +253,9 @@ def download_attendance_csv():
         with open(ATTENDANCE_FILE, 'r', encoding='utf-8') as f:
             attendance_records = json.load(f)
         
+        # 현재 학생 ID 목록 (현재 활성화된 학생들만)
+        active_student_ids = [student['id'] for student in students]
+        
         # CSV 데이터 생성을 위한 메모리 버퍼
         csv_buffer = StringIO()
         csv_writer = csv.writer(csv_buffer)
@@ -250,18 +263,20 @@ def download_attendance_csv():
         # CSV 헤더 작성
         csv_writer.writerow(['날짜', '학생ID', '이름', '출석여부', '출석코드', '출석시간'])
         
-        # 모든 출석 기록을 CSV 형식으로 변환
+        # 모든 출석 기록을 CSV 형식으로 변환 (삭제된 학생 제외)
         for record in attendance_records:
             date = record.get('date', '')
             for student in record.get('students', []):
-                csv_writer.writerow([
-                    date,
-                    student.get('id', ''),
-                    student.get('name', ''),
-                    '출석' if student.get('present', False) else '미출석',
-                    student.get('code', ''),
-                    student.get('timestamp', '')
-                ])
+                # 현재 활성화된 학생 ID 목록에 있는 학생만 포함
+                if student.get('id') in active_student_ids:
+                    csv_writer.writerow([
+                        date,
+                        student.get('id', ''),
+                        student.get('name', ''),
+                        '출석' if student.get('present', False) else '미출석',
+                        student.get('code', ''),
+                        student.get('timestamp', '')
+                    ])
         
         # 메모리 버퍼의 내용을 파일로 다운로드
         csv_buffer.seek(0)
