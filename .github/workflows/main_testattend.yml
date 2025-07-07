@@ -48,9 +48,10 @@ jobs:
           source venv/bin/activate
           pip install flake8
           # Stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv
-          # Exit-zero treats all errors as warnings
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=venv
+          # Only check main application files, exclude dependencies and virtual environment
+          flake8 *.py utils/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings for comprehensive check
+          flake8 *.py utils/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       # Test Application Imports
       - name: Test application imports
