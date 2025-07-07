@@ -29,7 +29,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 @main_bp.route('/')
 def index():
     try:
-        return render_template('index_refactored.html')
+        return render_template('index.html')
     except Exception as e:
         logger.error(f"Template rendering error: {e}")
         # 폴백으로 기존 템플릿 시도
