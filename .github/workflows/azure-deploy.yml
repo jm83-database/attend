@@ -1,0 +1,50 @@
+name: Deploy to Azure WebApp
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v3
+
+    - name: Setup Python version
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Create and start virtual environment
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+
+    - name: Install dependencies
+      run: |
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests (if you have any)
+      run: |
+        source venv/bin/activate
+        # python -m pytest tests/ (테스트 파일이 있다면)
+        echo "No tests to run currently"
+
+    - name: Zip artifact for deployment
+      run: |
+        zip -r release.zip . -x "*.git*" "*venv*" "*.env*" "*__pycache__*" "*.pyc" "logs/*"
+
+    - name: 'Deploy to Azure Web App'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'your-webapp-name'  # Azure WebApp 이름으로 변경하세요
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+        package: ./release.zip
