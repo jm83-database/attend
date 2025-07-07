@@ -1,57 +1,127 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+# Optimized CI/CD for Refactored Attendance System
+# Deploy Python app to Azure Web App - testattend
 
-name: Build and deploy Python app to Azure Web App - testattend
+name: Build and deploy Refactored Attendance System to Azure Web App - testattend
 
 on:
   push:
     branches:
       - main
+      - master
   workflow_dispatch:
 
+env:
+  PYTHON_VERSION: '3.11'  # Updated to Python 3.11
+
 jobs:
+  # Build and Test Job
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v4
 
-      - name: Set up Python version
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Create and start virtual environment
         run: |
           python -m venv venv
           source venv/bin/activate
-      
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+          echo "Virtual environment created and activated"
 
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+      - name: Install dependencies
+        run: |
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "Dependencies installed successfully"
+
+      # Code Quality Check
+      - name: Lint with flake8
+        run: |
+          source venv/bin/activate
+          pip install flake8
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv
+          # Exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=venv
+
+      # Test Application Imports
+      - name: Test application imports
+        run: |
+          source venv/bin/activate
+          python -c "
+          import os
+          os.environ['TEACHER_PASSWORD'] = 'test'
+          os.environ['SECRET_KEY'] = 'test-key'
+          try:
+              import app
+              print('✓ App import successful')
+              import config
+              print('✓ Config import successful')
+              import models
+              print('✓ Models import successful')
+              import services
+              print('✓ Services import successful')
+              import routes
+              print('✓ Routes import successful')
+              from app import app
+              print('✓ Flask app created successfully')
+              print('All imports and basic tests passed!')
+          except Exception as e:
+              print(f'✗ Import test failed: {e}')
+              exit(1)
+          "
+
+      # Create optimized deployment package
+      - name: Create deployment package
+        run: |
+          # Remove development files and create clean deployment package
+          rm -rf venv/
+          rm -rf __pycache__/
+          find . -name "*.pyc" -delete
+          find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+          
+          # Create deployment zip excluding unnecessary files
+          zip -r release.zip . \
+            -x "*.git*" \
+            -x "*venv*" \
+            -x "*.env*" \
+            -x "*__pycache__*" \
+            -x "*.pyc" \
+            -x "logs/*" \
+            -x "app_refactored.py" \
+            -x "requirements_updated.txt" \
+            -x "README_refactored.md" \
+            -x "static/js/main_refactored.js" \
+            -x "templates/index_refactored.html" \
+            -x ".github/workflows/azure-deploy.yml" \
+            -x ".github/workflows/ci.yml"
+          
+          echo "Deployment package created successfully"
+          ls -la release.zip
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            release.zip
-            !venv/
+          path: release.zip
 
+  # Deploy Job
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    environment: production
     
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
       - name: Download artifact from build job
@@ -60,9 +130,11 @@ jobs:
           name: python-app
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip
+        run: |
+          unzip -q release.zip
+          echo "Deployment files extracted"
+          ls -la
 
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -76,4 +148,39 @@ jobs:
         with:
           app-name: 'testattend'
           slot-name: 'Production'
+
+      # Post-deployment verification
+      - name: Post-deployment health check
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 30
           
+          # Basic health check
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://testattend.azurewebsites.net/ || echo "000")
+          
+          if [ "$response" = "200" ]; then
+            echo "✓ Deployment successful! App is responding with HTTP 200"
+            echo "🚀 Refactored Attendance System is live at: https://testattend.azurewebsites.net/"
+          else
+            echo "⚠️ Deployment completed but app returned HTTP $response"
+            echo "Check Azure logs for any issues"
+          fi
+
+  # Notification Job (optional)
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: always()
+    
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
+            echo "🎉 Deployment Successful!"
+            echo "📱 Refactored Attendance System is now live"
+            echo "🔗 URL: https://testattend.azurewebsites.net/"
+            echo "✨ Features: Modular architecture, improved security, React components"
+          else
+            echo "❌ Deployment Failed"
+            echo "Please check the logs and retry"
+          fi
