@@ -278,7 +278,7 @@ def bulk_delete_students():
         traceback.print_exc()
         return jsonify({"success": False, "message": f"오류 발생: {e}"}), 500
 
-# 학생 비밀번호 다운로드 엔드포인트 (교사용)
+# 학생 비밀번호 다운로드 엔드포인트 (교사용) - 삭제된 학생 제외
 @api_bp.route('/students/passwords', methods=['GET'])
 def download_student_passwords():
     try:
@@ -289,7 +289,7 @@ def download_student_passwords():
         # CSV 헤더 작성
         csv_writer.writerow(['학생ID', '이름', '비밀번호'])
         
-        # 학생 비밀번호 정보를 CSV 형식으로 변환
+        # 현재 활성화된 학생들의 비밀번호 정보만 CSV 형식으로 변환 (삭제된 학생 제외)
         students = student_service.get_students(include_passwords=True)
         for student in students:
             csv_writer.writerow([
