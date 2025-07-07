@@ -139,20 +139,24 @@ def download_attendance_csv():
         # CSV 헤더 작성
         csv_writer.writerow(['날짜', '학생ID', '이름', '출석여부', '출석코드', '출석시간'])
         
-        # 모든 출석 기록을 CSV 형식으로 변환 (삭제된 학생 제외)
+        # 오늘 날짜만 필터링하여 출석 기록을 CSV 형식으로 변환
+        today = (datetime.datetime.now() + Config.TIMEZONE_OFFSET).strftime("%Y-%m-%d")
+        
         for record in attendance_records:
             date = record.get('date', '')
-            for student in record.get('students', []):
-                # 현재 활성화된 학생 ID 목록에 있는 학생만 포함
-                if student.get('id') in active_student_ids:
-                    csv_writer.writerow([
-                        date,
-                        student.get('id', ''),
-                        student.get('name', ''),
-                        '출석' if student.get('present', False) else '미출석',
-                        student.get('code', ''),
-                        student.get('timestamp', '')
-                    ])
+            # 오늘 날짜만 포함
+            if date == today:
+                for student in record.get('students', []):
+                    # 현재 활성화된 학생 ID 목록에 있는 학생만 포함
+                    if student.get('id') in active_student_ids:
+                        csv_writer.writerow([
+                            date,
+                            student.get('id', ''),
+                            student.get('name', ''),
+                            '출석' if student.get('present', False) else '미출석',
+                            student.get('code', ''),
+                            student.get('timestamp', '')
+                        ])
         
         # 메모리 버퍼의 내용을 파일로 다운로드
         csv_buffer.seek(0)
