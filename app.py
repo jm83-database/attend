@@ -17,9 +17,12 @@ def create_app():
     
     return app
 
+# Azure WebApp과 CI/CD를 위한 전역 app 인스턴스
+app = create_app()
+
 def main():
     """메인 실행 함수"""
-    app = create_app()
+    # 전역 app 인스턴스 사용
     
     print("서버를 시작합니다...")
     print(f"개발 서버 주소: http://localhost:{Config.PORT}/")
